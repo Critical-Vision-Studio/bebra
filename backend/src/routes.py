@@ -4,12 +4,6 @@ from .database import execute_query_one
 router = APIRouter()
 
 
-@router.get("/")
-async def root():
-    """Root endpoint"""
-    return {"message": "Hello World"}
-
-
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
