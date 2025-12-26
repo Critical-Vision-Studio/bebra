@@ -1,50 +1,31 @@
-import { Routes, Route, Link } from 'react-router-dom'
-import HomePage from './pages/HomePage'
-import About from './pages/About'
-import MainLayout from './layouts/MainLayout'
+import { useState, useEffect } from 'react'
+import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
-import ItemsPage from './pages/ItemsPage'
 
 function App() {
-  const linkStyle = {
-    color: '#007bff',
-    textDecoration: 'none',
-    fontWeight: 'bold' as const
+  const [token, setToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('access_token')
+    if (savedToken) {
+      setToken(savedToken)
+    }
+  }, [])
+
+  const handleLogin = (newToken: string) => {
+    setToken(newToken)
   }
 
-  return (
-    <Routes>
-      {/* Public routes without layout */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/about" element={<About />} />
-      
-      {/* Dashboard routes with MainLayout */}
-      <Route element={<MainLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/items" element={<ItemsPage />} />
-      </Route>
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    setToken(null)
+  }
 
-      {/* 404 route */}
-      <Route path="*" element={
-        <div style={{ 
-          padding: '20px', 
-          textAlign: 'center', 
-          minHeight: '100vh', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <h1>404 - Page Not Found</h1>
-          <p>The page you're looking for doesn't exist.</p>
-          <div style={{ marginTop: '20px', display: 'flex', gap: '1rem' }}>
-            <Link to="/" style={linkStyle}>← Go to Home</Link>
-            <Link to="/dashboard" style={linkStyle}>Go to Dashboard →</Link>
-          </div>
-        </div>
-      } />
-    </Routes>
-  )
+  if (!token) {
+    return <AuthPage onLogin={handleLogin} />
+  }
+
+  return <Dashboard onLogout={handleLogout} />
 }
 
 export default App

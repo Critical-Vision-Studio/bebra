@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Bother App API – Prototype Step 1
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:8000
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+
+  /auth/login:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+
+  /users/me:
+    get:
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/search:
+    get:
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /invitations:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationCreate"
+      responses:
+        "201":
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+    get:
+      responses:
+        "200":
+          description: My invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+
+  /invitations/{id}/respond:
+    post:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationResponse"
+      responses:
+        "200":
+          description: Invitation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthCredentials:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthToken:
+      type: object
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+
+    User:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+
+    InvitationCreate:
+      type: object
+      required: [target_user_id]
+      properties:
+        target_user_id:
+          type: string
+          format: uuid
+
+    InvitationResponse:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [accept, deny]
+
+    Invitation:
+      type: object
+      required: [id, from_user_id, to_user_id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_user_id:
+          type: string
+          format: uuid
+        to_user_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, accepted, denied]
