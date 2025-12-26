@@ -5,9 +5,13 @@ meta {
 }
 
 get {
-  url: 
+  url: {{auth_url}}/friends?pending=True
   body: none
   auth: inherit
+}
+
+params:query {
+  pending: True
 }
 
 settings {
