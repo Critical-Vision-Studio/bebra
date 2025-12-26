@@ -1,0 +1,16 @@
+# server
+uvicorn[standard]
+# backend
+fastapi[all]
+# db
+pydantic
+psycopg[binary]
+psycopg[pool]
+
+# util
+dotenv
+
+# auth
+pyjwt
+bcrypt
+authlib
