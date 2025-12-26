@@ -1,12 +1,37 @@
--- Basic PostgreSQL schema template
--- Replace with your actual database schema
-
--- Example table - replace with your own tables
-CREATE TABLE IF NOT EXISTS sample_table (
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_users_username ON users(username);
 
--- Insert sample data - remove in production
-INSERT INTO sample_table (name) VALUES ('Sample Item') ON CONFLICT DO NOTHING;
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_notifications_recipient_unread 
+ON notifications(recipient_id) 
+WHERE is_read = FALSE;
+
+
+-- Refresh Tokens Table
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    prev_token VARCHAR(255),
+    revoked BOOLEAN DEFAULT FALSE,
+
+    expires_minutes TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_update TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+);
+
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
