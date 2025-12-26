@@ -57,15 +57,6 @@ function ItemsPage() {
     }
   }
 
-  const handleUpdateItem = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingItem && editingItem.name.trim()) {
-      updateMutation.mutate({
-        id: editingItem.id,
-        name: editingItem.name.trim()
-      })
-    }
-  }
 
   if (isLoading) return <LoadingSpinner message="Loading items..." />
   if (error) return <ErrorMessage title="Error loading items" message={String(error)} />

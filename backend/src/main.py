@@ -7,8 +7,8 @@ from psycopg_pool import AsyncConnectionPool
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-from .routes import router
-from .api_router import router as api_router
+from src.routes import router
+from src.auth import router as auth_router
 
 load_dotenv()
 
@@ -19,7 +19,13 @@ def get_database_url():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global pool
     # Startup: Initialize database connection pool
+    pool = AsyncConnectionPool(
+        conninfo=get_database_url(),
+        configure=configure_connection,
+        open=False  # Don't open in constructor to avoid deprecation warning
+    )
     await pool.open()
     app.async_pool = pool
     yield
@@ -31,13 +37,8 @@ async def configure_connection(conn):
     """Configure database connection to return dict rows"""
     setattr(conn, "row_factory", dict_row)
 
-print("URL", get_database_url())
-
-# Initialize connection pool
-pool = AsyncConnectionPool(
-    conninfo=get_database_url(),
-    configure=configure_connection
-)
+# Global pool variable (will be set in lifespan)
+pool = None
 
 # Create FastAPI app
 app = FastAPI(
@@ -58,4 +59,4 @@ app.add_middleware(
 
 # Include routers
 app.include_router(router)  # Basic routes (/health, /db-test)
-app.include_router(api_router)  # API routes (/items, etc.)
+app.include_router(auth_router)  # API routes (/items, etc.)

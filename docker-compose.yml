@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:latest
+    volumes:
+      - dbvol:/var/lib/postgresql
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    environment:
+      - POSTGRES_USER=bother
+      - POSTGRES_PASSWORD=bother
+      - POSTGRES_DB=bother
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bother"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  webserv:
+    stdin_open: true
+    tty: true
+    stop_signal: SIGTERM
+    stop_grace_period: 5s
+    build:
+      context: .
+      dockerfile: webserv.dockerfile
+    ports:
+      - "8020:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - logs:/var/log/amivizor/
+    restart: on-failure
+    develop:
+      watch:
+        - path: ./backend/
+          target: /backend
+          action: sync+restart
+
+volumes:
+  dbvol:
+  logs:

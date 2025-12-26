@@ -1,0 +1,50 @@
+{
+  "listeners": {
+    "*:80": {
+      "pass": "routes/main"
+    }
+  },
+  "routes": {
+    "main": [
+      {
+        "match": {
+          "uri": "/auth/*"
+        },
+        "action": {
+          "pass": "applications/authserver"
+        }
+      },
+      {
+        "match": {
+          "uri": "/*"
+        },
+        "action": {
+          "share": ["/frontend/dist$uri", "/frontend/dist/index.html"]
+        }
+      }
+    ]
+  },
+  "applications": {
+    "authserver": {
+      "type": "python 3",
+      "home": "/backend/venv/",
+      "path": "/backend/",
+      "working_directory": "/backend/",
+      "module": "src.main",
+      "callable": "app",
+      "user": "bother",
+      "group": "bother",
+      "environment": {
+        "AUTH_BASE_PATH": "/backend/authserv/",
+        "DATABASE_URL": "postgresql://bother:bother@db/bother",
+
+        "SECRET_KEY": "secret_key",
+        "ALGORITHM": "HS256",
+        "ENCRYPTION_KEY": "encryption_key_test",
+        "ACCESS_TOKEN_EXPIRE_MINUTES": "1",
+        "REFRESH_TOKEN_EXPIRE_MINUTES": "3",
+        "ENV": "DEV"
+      }
+    }
+  }
+}

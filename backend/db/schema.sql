@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_name ON users(name);
 
 -- Notifications Table
 CREATE TABLE IF NOT EXISTS notifications (
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 
-
+-- friendships table
 CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'declined');
 CREATE TABLE IF NOT EXISTS friendships (
     id SERIAL PRIMARY KEY,

@@ -1,1 +1,0 @@
-# FastAPI + PostgreSQL Template Backend

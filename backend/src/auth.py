@@ -1,6 +1,8 @@
+from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, status
 from pydantic import BaseModel
-from datetime import datetime
+from typing import Optional
+from psycopg import IntegrityError
 from src.database import execute_query, execute_query_one, execute_command
 
 router = APIRouter(prefix="/auth/users", tags=["users"])
@@ -18,13 +20,20 @@ class User(BaseModel):
 
 
 @router.get("")
-async def get_users(request: Request):
+async def get_users(request: Request, q: Optional[str] = None):
     """Get all items from users"""
     try:
-        items = await execute_query(
-            request,
-            "SELECT id, name, created_at FROM users ORDER BY created_at DESC"
-        )
+        if q:
+            items = await execute_query(
+                request,
+                "SELECT id, name, created_at FROM users WHERE name ILIKE %s ORDER BY created_at DESC",
+                (f"%{q}%",)
+            )
+        else:
+            items = await execute_query(
+                request,
+                "SELECT id, name, created_at FROM users ORDER BY created_at DESC"
+            )
         return items
     except Exception as e:
         raise HTTPException(
@@ -61,13 +70,12 @@ async def get_user(user_id: int, request: Request):
 
 @router.post("")
 async def create_user(user: UserSignUp, request: Request):
-    """Create a new item"""
+    """Create a new user"""
     try:
-        # TODO: use insert returning
         await execute_command(
             request,
-            "INSERT INTO users(name, password) VALUES (%s, %s)",
-            (user.name,user)
+            "INSERT INTO users(name, password_hash) VALUES (%s, %s)",
+            (user.name, user.password)
         )
 
         new_item = await execute_query_one(
@@ -75,11 +83,21 @@ async def create_user(user: UserSignUp, request: Request):
             "SELECT id, name, created_at FROM users WHERE name = %s ORDER BY id DESC LIMIT 1",
             (user.name,)
         )
-        
+
         return new_item
+    except IntegrityError as e:
+        if "unique constraint" in str(e).lower() and "name" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database integrity error: {str(e)}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create item: {str(e)}"
+            detail=f"Failed to create user: {str(e)}"
         )
 

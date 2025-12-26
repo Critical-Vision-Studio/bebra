@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from .database import execute_query_one
+from src.database import execute_query_one
 
 router = APIRouter()
 
