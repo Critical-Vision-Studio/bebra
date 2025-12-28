@@ -101,3 +101,26 @@ async def create_user(user: UserSignUp, request: Request):
             detail=f"Failed to create user: {str(e)}"
         )
 
+
+@router.get("/friends")
+async def get_friends(request: Request, q: Optional[str] = None):
+    try:
+        if q:
+            items = await execute_query(
+                request,
+                "SELECT id, name, created_at FROM friends WHERE name ILIKE %s ORDER BY created_at DESC",
+                (f"%{q}%",)
+            )
+        else:
+            items = await execute_query(
+                request,
+                "SELECT id, name, created_at FROM users ORDER BY created_at DESC"
+            )
+        return items
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch items: {str(e)}"
+        )
+
+

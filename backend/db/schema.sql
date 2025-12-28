@@ -36,17 +36,34 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 
--- friendships table
-CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'declined');
-CREATE TABLE IF NOT EXISTS friendships (
+-- Friendship Requests Table
+CREATE TYPE friendship_request_status AS ENUM ('pending', 'accepted', 'rejected');
+CREATE TABLE IF NOT EXISTS friendship_requests (
     id SERIAL PRIMARY KEY,
-    requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    addressee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status friendship_status DEFAULT 'pending', 
+    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status friendship_request_status DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT check_self_friend CHECK (requester_id != addressee_id),
-    UNIQUE (requester_id, addressee_id)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_self_friendship_request CHECK (sender_id != receiver_id),
+    UNIQUE (sender_id, receiver_id)
 );
-CREATE INDEX idx_friendships_requester ON friendships(requester_id);
-CREATE INDEX idx_friendships_addressee ON friendships(addressee_id);
+CREATE INDEX idx_friendship_requests_sender ON friendship_requests(sender_id);
+CREATE INDEX idx_friendship_requests_receiver ON friendship_requests(receiver_id);
+
+-- Relationship Requests Table
+CREATE TYPE friendships AS ENUM ('friend', 'blocked');
+CREATE TABLE IF NOT EXISTS relationship_requests (
+    id SERIAL PRIMARY KEY,
+    user_1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_2_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status relationship_status DEFAULT 'friend',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_self_relationship CHECK (user_1_id != user_2_id),
+    UNIQUE (user_1_id, user_2_id)
+);
+CREATE INDEX idx_relationship_requests_user_1 ON relationship_requests(user_1_id);
+CREATE INDEX idx_relationship_requests_user_2 ON relationship_requests(user_2_id);
