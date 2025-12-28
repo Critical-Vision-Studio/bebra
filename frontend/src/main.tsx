@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import './styles/main.css'
-import './api/mockClient' // Enable mock API
+// import './api/mockClient' // Enable mock API
 
 // Create a client for React Query
 const queryClient = new QueryClient({

@@ -8,6 +8,14 @@
     "main": [
       {
         "match": {
+          "uri": "/api/*"
+        },
+        "action": {
+          "pass": "applications/authserver"
+        }
+      },
+      {
+        "match": {
           "uri": "/auth/*"
         },
         "action": {

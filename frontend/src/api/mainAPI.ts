@@ -62,12 +62,22 @@ export async function getInteractions(friendId: number): Promise<Interaction[]> 
 }
 
 export async function createInteraction(instance: Interaction): Promise<Interaction> {
-  const { data } = await apiClient.post<Interaction>(`/users/me/interactions`, instance)
+  const payload = {
+    other_user_id: instance.other_user_id,
+    direction: instance.direction,
+    template_id: instance.options.id
+  }
+  const { data } = await apiClient.post<Interaction>(`/users/me/interactions`, payload)
   return data
 }
 
 export async function updateInteraction(instance: Interaction): Promise<Interaction> {
-  const { data } = await apiClient.put<Interaction>(`/users/me/interactions/${instance.id}`, instance)
+  const payload = {
+    other_user_id: instance.other_user_id,
+    direction: instance.direction,
+    template_id: instance.options.id
+  }
+  const { data } = await apiClient.put<Interaction>(`/users/me/interactions/${instance.id}`, payload)
   return data
 }
 
