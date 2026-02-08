@@ -24,6 +24,14 @@
       },
       {
         "match": {
+          "uri": "/users/*"
+        },
+        "action": {
+          "pass": "applications/authserver"
+        }
+      },
+      {
+        "match": {
           "uri": "/*"
         },
         "action": {

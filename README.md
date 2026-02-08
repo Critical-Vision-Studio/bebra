@@ -1,43 +1,43 @@
-# FastAPI + React + PostgreSQL Template
 
-A minimal template for building web applications with:
-- **Backend**: FastAPI with PostgreSQL using raw SQL
-- **Frontend**: React with TypeScript and Vite
-- **Database**: PostgreSQL with connection pooling
+## Run Instructions
+`docker compose up --build -d`
+## Run DEV Instructions
+1. `docker compose up db`
+2. backend: activate venv + start uvicorn server. See "Backend Setup".
+3. frontend: cd frontend && npm run dev
 
-## Project Structure
+# DB Check Instructions
+## Option 1: Using docker exec
+docker exec -it bebra-db-1 psql -U bother -d bother
+
+## Option 2: From host (if psql installed locally, CHECK PORT)
+psql -h localhost -p 5432 -U bother -d bother
+
+## Test users and tables
 
 ```
-fastapi-react-template/
-├── backend/
-│   ├── src/
-│   │   ├── main.py          # FastAPI application entry point
-│   │   └── database.py      # Database utility functions
-│   ├── db/
-│   │   └── schema.sql       # Database schema
-│   ├── requirements.txt     # Python dependencies
-│   └── env_example.txt      # Environment variables template
-└── frontend/
-    ├── src/
-    │   ├── main.tsx         # React entry point
-    │   ├── App.tsx          # Main React component
-    │   └── api.ts           # API client configuration
-    ├── package.json         # Node.js dependencies
-    ├── vite.config.ts       # Vite configuration
-    ├── tsconfig.json        # TypeScript configuration
-    └── index.html           # HTML template
+   -- List all tables
+   \dt
+
+   -- List all users/roles
+   \du
+
+   -- Show table structure
+   \d users
+   \d friendship_requests
+   \d relationships
+   \d interactions
+
+   -- Query data
+   SELECT * FROM users;
+   SELECT * FROM friendship_requests;
+   SELECT * FROM relationships;
+
+   -- Exit
+   \q
 ```
-
-## Setup Instructions
-
-### Prerequisites
-- Python 3.8+
-- Node.js 18+
-- PostgreSQL 12+
 
 #### Manual Setup
-
-<details>
 <summary>Click to expand manual setup instructions</summary>
 
 ##### Option 1: Using PostgreSQL Command Line
@@ -98,8 +98,6 @@ docker exec -i postgres-fastapi psql -U your_username -d your_database < backend
 psql -h localhost -U your_username -d your_database -c "SELECT * FROM sample_table;"
 ```
 
-</details>
-
 ### Backend Setup
 
 #### Option A: Using pyenv (Recommended)
@@ -130,99 +128,3 @@ psql -h localhost -U your_username -d your_database -c "SELECT * FROM sample_tab
 1. Navigate to frontend directory: `cd frontend`
 2. Install dependencies: `npm install`
 3. Start development server: `npm run dev`
-
-## Usage
-
-- Backend API: http://localhost:8000
-- Frontend: http://localhost:5173
-- API Docs: http://localhost:8000/docs
-
-## Frontend Features
-
-- **React Query (TanStack Query)**: Server state management with caching, background updates, and optimistic updates
-- **React Router**: Client-side routing with navigation
-- **Custom Hooks**: Reusable API hooks in `frontend/src/hooks/useApi.ts`
-- **TypeScript Types**: Type definitions in `frontend/src/types/`
-- **Utility Functions**: Common helpers in `frontend/src/utils/`
-- **API Client**: Configured Axios instance with interceptors
-- **Basic Styling**: CSS utilities and components
-
-## Project Structure Details
-
-```
-frontend/src/
-├── components/          # React components
-│   ├── HomePage.tsx     # Home page with React Query examples
-│   └── About.tsx        # About page
-├── hooks/              # Custom React hooks
-│   └── useApi.ts       # API-related hooks
-├── styles/             # CSS files
-│   └── main.css        # Global styles and utilities
-├── types/              # TypeScript definitions
-│   └── index.ts        # Common types
-├── utils/              # Utility functions
-│   └── index.ts        # Common helpers
-├── api.ts              # Axios configuration and API service
-├── App.tsx             # Main app with routing
-└── main.tsx            # App entry point with providers
-```
-
-## Customization
-
-This template provides the basic structure. Customize by:
-1. Adding your own database tables to `backend/db/schema.sql`
-2. Creating API routes in `backend/src/`
-3. Building React components in `frontend/src/components/`
-4. Adding custom hooks in `frontend/src/hooks/`
-5. Extending types in `frontend/src/types/`
-6. Adding utility functions in `frontend/src/utils/`
-
-## Backend Structure
-
-The backend is organized into separate modules:
-
-```
-backend/src/
-├── __init__.py          # Package initialization
-├── main.py              # FastAPI app setup and configuration
-├── database.py          # Database utility functions
-├── routes.py            # Basic routes (/, /health, /db-test)
-└── api_router.py        # API routes with CRUD examples (/api/items)
-```
-
-## API Examples
-
-### Database Utilities
-```python
-from .database import execute_query, execute_query_one, execute_command
-
-# In your route handler
-async def get_items(request: Request):
-    items = await execute_query(request, "SELECT * FROM your_table")
-    return items
-```
-
-### Router Organization
-```python
-from fastapi import APIRouter
-
-# Create a router with prefix and tags
-router = APIRouter(prefix="/api", tags=["api"])
-
-@router.get("/items")
-async def get_items():
-    return []
-
-# Include in main.py
-app.include_router(router)
-```
-
-### Available Endpoints
-- `GET /` - Root endpoint
-- `GET /health` - Health check
-- `GET /db-test` - Database connectivity test
-- `GET /api/items` - List all items
-- `GET /api/items/{item_id}` - Get specific item
-- `POST /api/items` - Create new item
-- `PUT /api/items/{item_id}` - Update item
-- `DELETE /api/items/{item_id}` - Delete item

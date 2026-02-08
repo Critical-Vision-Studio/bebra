@@ -22,7 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_database_url():
-    return os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/mydb')
+    user = os.getenv('POSTGRES_USER', 'postgres')
+    password = os.getenv('POSTGRES_PASSWORD', 'password')
+    db = os.getenv('POSTGRES_DB', 'mydb')
+    host = os.getenv('DB_HOST', 'db')
+    port = os.getenv('DB_PORT', '5433')
+    return os.getenv('DATABASE_URL', f'postgresql://{user}:{password}@{host}:{port}/{db}')
 
 
 @asynccontextmanager

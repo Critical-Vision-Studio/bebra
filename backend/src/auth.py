@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException, status, Depends, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 import jwt
 import bcrypt
@@ -20,7 +20,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 security = HTTPBearer()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-users_router = APIRouter(prefix="/auth/users", tags=["users"])
+users_router = APIRouter(prefix="/users", tags=["users"])
 
 
 class UserSignUp(BaseModel):
@@ -34,30 +34,36 @@ class User(BaseModel):
 
 
 class FriendshipRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     sender_id: int
     receiver_id: int
     status: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class InteractionTemplate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     description: str
     options: list[str]
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class Interaction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     main_user_id: int
     other_user_id: int
     direction: str
     options: InteractionTemplate
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class Token(BaseModel):
