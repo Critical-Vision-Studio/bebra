@@ -10,6 +10,10 @@ from psycopg.rows import dict_row
 
 from src.routes import router
 from src.auth import router as auth_router, users_router
+from src.message_sets import router as message_sets_router
+from src.friendships import router as friendships_router
+from src.tinder_bother import router as tinder_bother_router
+from src.settings import router as settings_router, unwanted_router
 
 load_dotenv()
 
@@ -80,3 +84,8 @@ app.add_middleware(
 app.include_router(router)  # Basic routes (/health, /db-test)
 app.include_router(auth_router)  # Auth routes (/auth/*)
 app.include_router(users_router)  # User routes (/users/*)
+app.include_router(message_sets_router)  # Message sets routes (/message-sets/*)
+app.include_router(friendships_router)  # Friendships routes (/friendships/*)
+app.include_router(tinder_bother_router)  # Tinder-bother routes (/tinder-bother/*)
+app.include_router(settings_router)  # Settings routes (/users/me/settings/*)
+app.include_router(unwanted_router)  # Unwanted users routes (/users/me/unwanted-users/*)

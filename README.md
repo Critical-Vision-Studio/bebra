@@ -6,7 +6,10 @@
 2. backend: activate venv + start uvicorn server. See "Backend Setup".
 3. frontend: cd frontend && npm run dev
 
-# DB Check Instructions
+# DB 
+## Migrations
+TODO: basic dbmate usage
+## Check Instructions
 ## Option 1: Using docker exec
 docker exec -it bebra-db-1 psql -U bother -d bother
 
@@ -24,21 +27,16 @@ psql -h localhost -p 5432 -U bother -d bother
 
    -- Show table structure
    \d users
-   \d friendship_requests
-   \d relationships
-   \d interactions
 
    -- Query data
    SELECT * FROM users;
-   SELECT * FROM friendship_requests;
-   SELECT * FROM relationships;
 
    -- Exit
    \q
 ```
 
 #### Manual Setup
-<summary>Click to expand manual setup instructions</summary>
+
 
 ##### Option 1: Using PostgreSQL Command Line
 1. **Install PostgreSQL** (if not already installed):
@@ -50,53 +48,6 @@ psql -h localhost -p 5432 -U bother -d bother
    - Ubuntu/Debian: `sudo systemctl start postgresql`
    - macOS: `brew services start postgresql`
    - Windows: Start from Services or use installer
-
-3. **Create database and user**:
-   ```bash
-# Connect as postgres user
-   sudo -u postgres psql
-   
-# Create database
-   CREATE DATABASE your_database;
-   
-# Create user (optional, for security)
-   CREATE USER your_username WITH ENCRYPTED PASSWORD 'your_password';
-   
-# Grant privileges
-    GRANT ALL PRIVILEGES ON DATABASE your_database TO your_username;
-    \c your_database
-    GRANT SELECT, INSERT, DELETE, UPDATE  ON ALL TABLES IN SCHEMA public TO your_username;
-# Exit
-    exit
-# Test priveleges
-   psql -h localhost -U mytemplate_user -d mytemplate_db -c "SELECT * from sample_table;"
-   \q
-   ```
-
-4. **Run the schema**:
-   ```bash
-   psql -U postgres -d your_database -f backend/db/schema.sql
-   ```
-
-##### Option 2: Using Docker
-```bash
-# Run PostgreSQL container
-docker run --name postgres-fastapi \
-  -e POSTGRES_DB=your_database \
-  -e POSTGRES_USER=your_username \
-  -e POSTGRES_PASSWORD=your_password \
-  -p 5432:5432 \
-  -d postgres:15
-
-# Wait a moment for container to start, then run schema
-docker exec -i postgres-fastapi psql -U your_username -d your_database < backend/db/schema.sql
-```
-
-##### Verify Database Setup
-```bash
-# Test connection
-psql -h localhost -U your_username -d your_database -c "SELECT * FROM sample_table;"
-```
 
 ### Backend Setup
 

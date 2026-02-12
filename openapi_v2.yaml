@@ -1,0 +1,891 @@
+openapi: 3.0.3
+info:
+  title: BotherApp API
+  version: 2.0.0
+  description: API for BotherApp - ephemeral communication using predefined message sets
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication
+  /auth/register:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /auth/token:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # Users
+  /users:
+    get:
+      tags: [Users]
+      summary: Search users
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /users/me/friends:
+    get:
+      tags: [Users]
+      summary: Get friends list
+      responses:
+        '200':
+          description: Friends list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  # Friend Requests
+  /users/me/friend-requests:
+    get:
+      tags: [Friend Requests]
+      summary: Get friend requests
+      responses:
+        '200':
+          description: Friend requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendRequest'
+    post:
+      tags: [Friend Requests]
+      summary: Send friend request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receiver_id]
+              properties:
+                receiver_id:
+                  type: integer
+                request_type:
+                  type: string
+                  enum: [normal, tinder]
+                  default: normal
+                attached_message_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Friend request sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+
+  /users/me/friend-requests/{id}/accept:
+    post:
+      tags: [Friend Requests]
+      summary: Accept friend request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Friend request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+
+  /users/me/friend-requests/{id}/reject:
+    post:
+      tags: [Friend Requests]
+      summary: Reject friend request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Friend request rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+
+  # Message Sets
+  /message-sets:
+    get:
+      tags: [Message Sets]
+      summary: Browse message sets
+      parameters:
+        - name: public
+          in: query
+          schema:
+            type: boolean
+        - name: tags
+          in: query
+          schema:
+            type: string
+          description: Comma-separated tags
+        - name: media_type
+          in: query
+          schema:
+            type: string
+            enum: [text, image, gif, all]
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Message sets list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageSet'
+    post:
+      tags: [Message Sets]
+      summary: Create message set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageSet'
+      responses:
+        '201':
+          description: Message set created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSet'
+
+  /message-sets/{id}:
+    get:
+      tags: [Message Sets]
+      summary: Get message set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Message set details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSet'
+    put:
+      tags: [Message Sets]
+      summary: Update message set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMessageSet'
+      responses:
+        '200':
+          description: Message set updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSet'
+    delete:
+      tags: [Message Sets]
+      summary: Delete message set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Message set deleted
+
+  /message-sets/{id}/copy:
+    post:
+      tags: [Message Sets]
+      summary: Copy message set to personal collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Message set copied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSet'
+
+  /message-sets/users/me:
+    get:
+      tags: [Message Sets]
+      summary: Get my message sets
+      responses:
+        '200':
+          description: My message sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageSet'
+
+  # Messages
+  /message-sets/{setId}/messages:
+    get:
+      tags: [Messages]
+      summary: Get messages in set
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: include_inactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+    post:
+      tags: [Messages]
+      summary: Add message to set
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessage'
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /message-sets/messages/{messageId}:
+    put:
+      tags: [Messages]
+      summary: Update message
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMessage'
+      responses:
+        '200':
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+    delete:
+      tags: [Messages]
+      summary: Delete message (soft delete)
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Message deleted
+
+  # Friendships
+  /friendships/{friendshipId}/message-sets:
+    get:
+      tags: [Friendships]
+      summary: Get assigned message sets for friendship
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Friendship message sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendshipMessageSet'
+    put:
+      tags: [Friendships]
+      summary: Assign message sets to friendship
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [message_set_id, position]
+                properties:
+                  message_set_id:
+                    type: integer
+                  position:
+                    type: integer
+                    minimum: 1
+                    maximum: 8
+              minItems: 8
+              maxItems: 8
+      responses:
+        '200':
+          description: Message sets assigned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendshipMessageSet'
+
+  /friendships/{friendshipId}/messages:
+    get:
+      tags: [Friendships]
+      summary: Get conversation history
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Conversation history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationMessage'
+    post:
+      tags: [Friendships]
+      summary: Send message
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_id]
+              properties:
+                message_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMessage'
+
+  /friendships/{friendshipId}/read:
+    put:
+      tags: [Friendships]
+      summary: Mark conversation as read
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marked as read
+
+  /friendships/{friendshipId}/unread:
+    get:
+      tags: [Friendships]
+      summary: Get unread status
+      parameters:
+        - name: friendshipId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Unread status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_unread:
+                    type: boolean
+                  last_read_at:
+                    type: string
+                    format: date-time
+
+  # Tinder-Bother
+  /tinder-bother/match:
+    get:
+      tags: [Tinder-Bother]
+      summary: Get tinder match
+      responses:
+        '200':
+          description: Tinder match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TinderMatch'
+        '404':
+          description: No matches available
+
+  # Settings
+  /users/me/settings:
+    get:
+      tags: [Settings]
+      summary: Get user settings
+      responses:
+        '200':
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+    put:
+      tags: [Settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tinder_enabled:
+                  type: boolean
+                tinder_interval_minutes:
+                  type: integer
+                  minimum: 5
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+
+  /users/me/unwanted-users:
+    get:
+      tags: [Settings]
+      summary: Get unwanted users list
+      responses:
+        '200':
+          description: Unwanted users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /users/me/unwanted-users/{userId}:
+    delete:
+      tags: [Settings]
+      summary: Remove user from unwanted list
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User removed from unwanted list
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+
+    FriendRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        sender_id:
+          type: integer
+        receiver_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        request_type:
+          type: string
+          enum: [normal, tinder]
+        attached_message_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MessageSet:
+      type: object
+      properties:
+        id:
+          type: integer
+        creator_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        is_public:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+
+    CreateMessageSet:
+      type: object
+      required: [name, is_public]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        is_public:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+
+    UpdateMessageSet:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        is_public:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        message_set_id:
+          type: integer
+        content_type:
+          type: string
+          enum: [text, image, gif]
+        storage_type:
+          type: string
+          enum: [inline, url]
+        content:
+          type: string
+        display_order:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive, deleted]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateMessage:
+      type: object
+      required: [content_type, storage_type, content, display_order]
+      properties:
+        content_type:
+          type: string
+          enum: [text, image, gif]
+        storage_type:
+          type: string
+          enum: [inline, url]
+        content:
+          type: string
+          minLength: 1
+        display_order:
+          type: integer
+          minimum: 1
+
+    UpdateMessage:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+        display_order:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [active, inactive, deleted]
+
+    FriendshipMessageSet:
+      type: object
+      properties:
+        id:
+          type: integer
+        friendship_id:
+          type: integer
+        message_set_id:
+          type: integer
+        position:
+          type: integer
+          minimum: 1
+          maximum: 8
+        created_at:
+          type: string
+          format: date-time
+        message_set:
+          $ref: '#/components/schemas/MessageSet'
+
+    ConversationMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        sender_id:
+          type: integer
+        receiver_id:
+          type: integer
+        friendship_id:
+          type: integer
+        message_id:
+          type: string
+          format: uuid
+        message_set_id:
+          type: integer
+        sent_at:
+          type: string
+          format: date-time
+        message:
+          $ref: '#/components/schemas/Message'
+        message_set:
+          $ref: '#/components/schemas/MessageSet'
+
+    TinderMatch:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        top_message_sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageSet'
+          maxItems: 3
+        expires_at:
+          type: string
+          format: date-time
+
+    UserSettings:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        tinder_enabled:
+          type: boolean
+        tinder_interval_minutes:
+          type: integer
+          minimum: 5
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

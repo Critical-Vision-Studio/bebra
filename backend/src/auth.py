@@ -40,6 +40,8 @@ class FriendshipRequest(BaseModel):
     sender_id: int
     receiver_id: int
     status: str
+    request_type: str = 'normal'
+    attached_message_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -288,6 +290,8 @@ async def get_blocked_users(request: Request, current_user: dict = Depends(get_c
 
 class SendFriendRequest(BaseModel):
     receiver_id: int
+    request_type: str = 'normal'  # 'normal' or 'tinder'
+    attached_message_id: Optional[str] = None  # UUID as string
 
 
 @users_router.get("/me/friend-requests", response_model=list[FriendshipRequest])
@@ -299,7 +303,9 @@ async def get_friend_requests(request: Request, current_user: dict = Depends(get
         requests = await execute_query(
             request,
             """
-            SELECT id, sender_id, receiver_id, status, created_at, updated_at
+            SELECT id, sender_id, receiver_id, status, 
+                   COALESCE(request_type::text, 'normal') as request_type,
+                   attached_message_id, created_at, updated_at
             FROM friendship_requests
             WHERE sender_id = %s OR receiver_id = %s
             ORDER BY created_at DESC
@@ -328,13 +334,15 @@ async def send_friend_request(req: SendFriendRequest, request: Request, current_
         existing_relationship = await execute_query_one(
             request,
             """
-            SELECT id FROM relationships
+            SELECT id, status FROM relationships
             WHERE (user_1_id = %s AND user_2_id = %s) OR (user_1_id = %s AND user_2_id = %s)
             """,
             (current_user["id"], req.receiver_id, req.receiver_id, current_user["id"])
         )
 
         if existing_relationship:
+            if existing_relationship['status'] == 'rejected':
+                raise HTTPException(status_code=403, detail="Cannot send request to user who rejected you")
             raise HTTPException(status_code=400, detail="Relationship already exists")
 
         # Check if request already exists
@@ -350,21 +358,35 @@ async def send_friend_request(req: SendFriendRequest, request: Request, current_
         if existing_request:
             raise HTTPException(status_code=400, detail="Friend request already exists")
 
+        # Verify attached message if provided
+        if req.attached_message_id:
+            message = await execute_query_one(
+                request,
+                "SELECT id, status FROM messages WHERE id = %s",
+                (req.attached_message_id,)
+            )
+            if not message:
+                raise HTTPException(status_code=404, detail="Attached message not found")
+            if message['status'] != 'active':
+                raise HTTPException(status_code=400, detail="Attached message is not active")
+
         # Create friend request
         await execute_command(
             request,
             """
-            INSERT INTO friendship_requests (sender_id, receiver_id)
-            VALUES (%s, %s)
+            INSERT INTO friendship_requests (sender_id, receiver_id, request_type, attached_message_id)
+            VALUES (%s, %s, %s::friendship_request_type, %s)
             """,
-            (current_user["id"], req.receiver_id)
+            (current_user["id"], req.receiver_id, req.request_type, req.attached_message_id)
         )
 
         # Get created request
         new_request = await execute_query_one(
             request,
             """
-            SELECT id, sender_id, receiver_id, status, created_at, updated_at
+            SELECT id, sender_id, receiver_id, status, 
+                   request_type::text as request_type, attached_message_id,
+                   created_at, updated_at
             FROM friendship_requests
             WHERE sender_id = %s AND receiver_id = %s
             ORDER BY id DESC LIMIT 1
@@ -418,10 +440,22 @@ async def accept_friend_request(request_id: int, request: Request, current_user:
             (friend_request["sender_id"], friend_request["receiver_id"])
         )
 
+        # Clear active tinder match if this was a tinder request
+        await execute_command(
+            request,
+            "DELETE FROM tinder_active_matches WHERE user_id = %s",
+            (current_user["id"],)
+        )
+
         # Get updated request
         updated_request = await execute_query_one(
             request,
-            "SELECT id, sender_id, receiver_id, status, created_at, updated_at FROM friendship_requests WHERE id = %s",
+            """
+            SELECT id, sender_id, receiver_id, status,
+                   request_type::text as request_type, attached_message_id,
+                   created_at, updated_at 
+            FROM friendship_requests WHERE id = %s
+            """,
             (request_id,)
         )
 
@@ -464,10 +498,33 @@ async def reject_friend_request(request_id: int, request: Request, current_user:
             (request_id,)
         )
 
+        # Add sender to unwanted list (rejected relationship)
+        await execute_command(
+            request,
+            """
+            INSERT INTO relationships (user_1_id, user_2_id, status)
+            VALUES (%s, %s, 'rejected')
+            ON CONFLICT (user_1_id, user_2_id) DO NOTHING
+            """,
+            (friend_request["receiver_id"], friend_request["sender_id"])
+        )
+
+        # Clear active tinder match if this was a tinder request
+        await execute_command(
+            request,
+            "DELETE FROM tinder_active_matches WHERE user_id = %s AND matched_user_id = %s",
+            (current_user["id"], friend_request["sender_id"])
+        )
+
         # Get updated request
         updated_request = await execute_query_one(
             request,
-            "SELECT id, sender_id, receiver_id, status, created_at, updated_at FROM friendship_requests WHERE id = %s",
+            """
+            SELECT id, sender_id, receiver_id, status, 
+                   request_type::text as request_type, attached_message_id,
+                   created_at, updated_at 
+            FROM friendship_requests WHERE id = %s
+            """,
             (request_id,)
         )
 

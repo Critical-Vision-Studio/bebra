@@ -3,7 +3,6 @@ services:
     image: postgres:latest
     volumes:
       - dbvol:/var/lib/postgresql
-      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:z
     env_file:
       - .env.docker
     ports:
