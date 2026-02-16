@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Anchor, Center } from '@mantine/core'
 import { registerUser, loginUser } from '../api/auth'
 
 interface AuthProps {
   onLogin: (token: string) => void
 }
 
-export default function Auth({ onLogin }: AuthProps) {
+export default function AuthPage({ onLogin }: AuthProps) {
   const [isLogin, setIsLogin] = useState(true)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -18,16 +19,12 @@ export default function Auth({ onLogin }: AuthProps) {
     setLoading(true)
 
     try {
-      if (isLogin) {
-        const result = await loginUser(username, password)
-        localStorage.setItem('access_token', result.access_token)
-        onLogin(result.access_token)
-      } else {
+      if (!isLogin) {
         await registerUser({ username, password })
-        const result = await loginUser(username, password)
-        localStorage.setItem('access_token', result.access_token)
-        onLogin(result.access_token)
       }
+      const result = await loginUser(username, password)
+      localStorage.setItem('access_token', result.access_token)
+      onLogin(result.access_token)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Authentication failed')
     } finally {
@@ -36,50 +33,41 @@ export default function Auth({ onLogin }: AuthProps) {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '400px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isLogin ? 'Login' : 'Register'}</h2>
-        
+    <Center h="100vh" bg="gray.0">
+      <Paper shadow="md" p="xl" w={400} radius="md">
+        <Title order={2} ta="center" mb="lg">
+          {isLogin ? 'Login' : 'Register'}
+        </Title>
+
         <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.75rem', marginBottom: '1rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-          
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.75rem', marginBottom: '1rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-          
-          {error && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
-          
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '0.75rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-          >
-            {loading ? 'Loading...' : isLogin ? 'Login' : 'Register'}
-          </button>
+          <Stack>
+            <TextInput
+              label="Username"
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.currentTarget.value)}
+              required
+            />
+            <PasswordInput
+              label="Password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
+              required
+            />
+            {error && <Text c="red" size="sm">{error}</Text>}
+            <Button type="submit" loading={loading} fullWidth>
+              {isLogin ? 'Login' : 'Register'}
+            </Button>
+          </Stack>
         </form>
-        
-        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
-          >
+
+        <Text ta="center" mt="md" size="sm">
+          <Anchor component="button" type="button" onClick={() => setIsLogin(!isLogin)}>
             {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Anchor>
+        </Text>
+      </Paper>
+    </Center>
   )
 }
-

@@ -1,19 +1,7 @@
-/**
- * Tinder-Bother API client
- */
-import { apiClient } from './client';
-import { MessageSet } from './messageSets';
+import { apiClient } from './client'
+import type { TinderMatch } from '../types'
 
-export interface TinderMatch {
-  user: {
-    id: number;
-    username: string;
-  };
-  top_message_sets: MessageSet[];
-  expires_at?: string;
+export async function getTinderMatch(): Promise<TinderMatch> {
+  const { data } = await apiClient.get<TinderMatch>('/tinder-bother/match')
+  return data
 }
-
-export const getTinderMatch = async (): Promise<TinderMatch> => {
-  const response = await apiClient.get('/tinder-bother/match');
-  return response.data;
-};

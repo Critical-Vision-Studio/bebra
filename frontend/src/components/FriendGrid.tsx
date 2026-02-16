@@ -1,38 +1,47 @@
-import type { User } from '../types'
+import { SimpleGrid, Paper, Text, Center } from '@mantine/core'
+import { IconUser } from '@tabler/icons-react'
+import type { FriendUser } from '../types'
 
 interface FriendGridProps {
-  friends: User[]
-  onFriendClick: (friend: User) => void
-  selectedFriend: User | null
+  friends: FriendUser[]
+  selectedFriend: FriendUser | null
+  onFriendClick: (friend: FriendUser) => void
 }
 
-export default function FriendGrid({ friends, onFriendClick, selectedFriend }: FriendGridProps) {
+export default function FriendGrid({ friends, selectedFriend, onFriendClick }: FriendGridProps) {
+  if (friends.length === 0) {
+    return (
+      <Center h={200}>
+        <Text c="dimmed">No friends yet. Search and add some!</Text>
+      </Center>
+    )
+  }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem' }}>
-      {friends.map(friend => (
-        <div
-          key={friend.id}
-          onClick={() => onFriendClick(friend)}
-          style={{
-            padding: '1rem',
-            background: selectedFriend?.id === friend.id ? '#007bff' : 'white',
-            color: selectedFriend?.id === friend.id ? 'white' : 'black',
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          <div style={{ fontWeight: 'bold' }}>{friend.username}</div>
-        </div>
-      ))}
-      {friends.length === 0 && (
-        <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '2rem' }}>
-          No friends yet. Search and add some!
-        </div>
-      )}
-    </div>
+    <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
+      {friends.map((friend) => {
+        const selected = selectedFriend?.id === friend.id
+        return (
+          <Paper
+            key={friend.id}
+            p="md"
+            withBorder
+            shadow={selected ? 'md' : undefined}
+            onClick={() => onFriendClick(friend)}
+            style={{
+              cursor: 'pointer',
+              borderColor: selected ? 'var(--mantine-color-blue-5)' : undefined,
+              textAlign: 'center',
+              transition: 'border-color 0.15s',
+            }}
+          >
+            <Center mb={4}>
+              <IconUser size={32} color="var(--mantine-color-gray-5)" />
+            </Center>
+            <Text size="sm" fw={500} truncate>{friend.username}</Text>
+          </Paper>
+        )
+      })}
+    </SimpleGrid>
   )
 }
-

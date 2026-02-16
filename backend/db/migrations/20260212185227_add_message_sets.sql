@@ -1,6 +1,9 @@
 -- migrate:up
 -- Add message sets, conversations, tinder-bother, user settings
 
+-- Add 'rejected' to relationships status enum (for unwanted list)
+ALTER TYPE friendships ADD VALUE IF NOT EXISTS 'rejected';
+
 -- Extend users table
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE,
@@ -177,3 +180,7 @@ ALTER TABLE users
   DROP COLUMN IF EXISTS registered_at,
   DROP COLUMN IF EXISTS last_logged_in,
   DROP COLUMN IF EXISTS email;
+
+-- Note: ALTER TYPE ... REMOVE VALUE is not supported in PostgreSQL.
+-- The 'rejected' value added to the friendships enum cannot be removed.
+-- To fully reverse, recreate the type (out of scope for down migration).

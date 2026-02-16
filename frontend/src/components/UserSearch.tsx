@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { TextInput, Group, Button, Paper, Text, Stack } from '@mantine/core'
+import { IconSearch, IconUserPlus } from '@tabler/icons-react'
 import { getUsers } from '../api/mainAPI'
 import type { User } from '../types'
 
@@ -15,51 +17,41 @@ export default function UserSearch({ onSendRequest }: UserSearchProps) {
     if (!query.trim()) return
     setLoading(true)
     try {
-      const users = await getUsers(query)
-      setResults(users)
-    } catch (err) {
-      console.error('Search failed:', err)
+      setResults(await getUsers(query))
+    } catch {
+      setResults([])
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <input
-          type="text"
+    <Stack gap="xs">
+      <Group gap="xs">
+        <TextInput
+          flex={1}
+          size="xs"
           placeholder="Search users..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+          leftSection={<IconSearch size={14} />}
         />
-        <button
-          onClick={handleSearch}
-          disabled={loading}
-          style={{ padding: '0.5rem 1rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Search
-        </button>
-      </div>
-      
+        <Button size="xs" onClick={handleSearch} loading={loading}>Search</Button>
+      </Group>
+
       {results.length > 0 && (
-        <div style={{ marginTop: '0.5rem', background: 'white', border: '1px solid #ddd', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto' }}>
-          {results.map(user => (
-            <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #eee' }}>
-              <span>{user.username}</span>
-              <button
-                onClick={() => onSendRequest(user.id)}
-                style={{ padding: '0.25rem 0.75rem', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
-              >
+        <Paper withBorder p={0} mah={200} style={{ overflow: 'auto' }}>
+          {results.map((user) => (
+            <Group key={user.id} justify="space-between" px="xs" py={4} style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+              <Text size="sm">{user.username}</Text>
+              <Button size="compact-xs" variant="light" color="green" leftSection={<IconUserPlus size={14} />} onClick={() => onSendRequest(user.id)}>
                 Add
-              </button>
-            </div>
+              </Button>
+            </Group>
           ))}
-        </div>
+        </Paper>
       )}
-    </div>
+    </Stack>
   )
 }
-

@@ -6,25 +6,18 @@ function App() {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('access_token')
-    if (savedToken) {
-      setToken(savedToken)
-    }
+    const saved = localStorage.getItem('access_token')
+    if (saved) setToken(saved)
   }, [])
 
-  const handleLogin = (newToken: string) => {
-    setToken(newToken)
-  }
+  const handleLogin = (newToken: string) => setToken(newToken)
 
   const handleLogout = () => {
     localStorage.removeItem('access_token')
     setToken(null)
   }
 
-  if (!token) {
-    return <AuthPage onLogin={handleLogin} />
-  }
-
+  if (!token) return <AuthPage onLogin={handleLogin} />
   return <Dashboard onLogout={handleLogout} />
 }
 

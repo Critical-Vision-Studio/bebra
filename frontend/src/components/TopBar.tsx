@@ -1,44 +1,30 @@
-/**
- * Top navigation bar component
- */
-import { Group, Text, Button, ActionIcon } from '@mantine/core';
-import { IconSettings, IconLogout } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { Group, Text, Button, ActionIcon } from '@mantine/core'
+import { IconSettings, IconLogout } from '@tabler/icons-react'
 
 interface TopBarProps {
-  username: string;
-  onLogout: () => void;
-  onSettingsClick: () => void;
+  username: string
+  onLogout: () => void
+  onSettingsClick: () => void
 }
 
-export function TopBar({ username, onLogout, onSettingsClick }: TopBarProps) {
-  const navigate = useNavigate();
-
+export default function TopBar({ username, onLogout, onSettingsClick }: TopBarProps) {
   return (
-    <div style={{
-      height: '60px',
-      borderBottom: '1px solid #e0e0e0',
-      padding: '0 20px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: '#fff'
-    }}>
-      <Group>
-        <Text size="xl" fw={700} style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
-          BotherApp
-        </Text>
-      </Group>
-
-      <Group>
+    <Group
+      h={56}
+      px="md"
+      justify="space-between"
+      style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', background: 'white' }}
+    >
+      <Text size="xl" fw={700}>BotherApp</Text>
+      <Group gap="sm">
         <Text size="sm" fw={500}>{username}</Text>
-        <ActionIcon variant="subtle" onClick={onSettingsClick}>
+        <ActionIcon variant="subtle" color="gray" onClick={onSettingsClick}>
           <IconSettings size={20} />
         </ActionIcon>
-        <Button variant="subtle" leftSection={<IconLogout size={16} />} onClick={onLogout}>
+        <Button variant="subtle" color="gray" size="xs" leftSection={<IconLogout size={16} />} onClick={onLogout}>
           Logout
         </Button>
       </Group>
-    </div>
-  );
+    </Group>
+  )
 }

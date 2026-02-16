@@ -1,43 +1,21 @@
-/**
- * Settings API client
- */
-import { apiClient } from './client';
+import { apiClient } from './client'
+import type { UserSettings, User } from '../types'
 
-export interface UserSettings {
-  user_id: number;
-  tinder_enabled: boolean;
-  tinder_interval_minutes: number;
-  created_at: string;
-  updated_at: string;
+export async function getSettings(): Promise<UserSettings> {
+  const { data } = await apiClient.get<UserSettings>('/users/me/settings')
+  return data
 }
 
-export interface UpdateSettings {
-  tinder_enabled?: boolean;
-  tinder_interval_minutes?: number;
+export async function updateSettings(payload: Partial<{ tinder_enabled: boolean; tinder_interval_minutes: number }>): Promise<UserSettings> {
+  const { data } = await apiClient.put<UserSettings>('/users/me/settings', payload)
+  return data
 }
 
-export interface UnwantedUser {
-  id: number;
-  username: string;
+export async function getUnwantedUsers(): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>('/users/me/unwanted-users')
+  return data
 }
 
-// Settings
-export const getSettings = async (): Promise<UserSettings> => {
-  const response = await apiClient.get('/users/me/settings');
-  return response.data;
-};
-
-export const updateSettings = async (data: UpdateSettings): Promise<UserSettings> => {
-  const response = await apiClient.put('/users/me/settings', data);
-  return response.data;
-};
-
-// Unwanted Users
-export const getUnwantedUsers = async (): Promise<UnwantedUser[]> => {
-  const response = await apiClient.get('/users/me/unwanted-users');
-  return response.data;
-};
-
-export const removeUnwantedUser = async (userId: number): Promise<void> => {
-  await apiClient.delete(`/users/me/unwanted-users/${userId}`);
-};
+export async function removeUnwantedUser(userId: number): Promise<void> {
+  await apiClient.delete(`/users/me/unwanted-users/${userId}`)
+}

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request, HTTPException, status, Depends, Query
 from src.auth import get_current_user
 from src.database import execute_query, execute_query_one, execute_command
 from src.models import (
-    FriendshipMessageSetAssignment, FriendshipMessageSetResponse,
+    FriendshipMessageSetAdd, FriendshipMessageSetAssignment, FriendshipMessageSetResponse,
     ConversationMessageSend, ConversationMessageResponse,
     MessageSetResponse, MessageResponse
 )
@@ -103,6 +103,136 @@ async def get_friendship_message_sets(
         raise
     except Exception as e:
         logger.error(f"Failed to fetch friendship message sets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{friendship_id}/message-sets", response_model=FriendshipMessageSetResponse, status_code=status.HTTP_201_CREATED)
+async def add_friendship_message_set(
+    friendship_id: int,
+    data: FriendshipMessageSetAdd,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a single message set to a friendship (auto-assigns next position, max 8)"""
+    logger.info(f"Add message set {data.message_set_id} to friendship {friendship_id}")
+
+    try:
+        await verify_friendship_access(request, friendship_id, current_user['id'])
+
+        # Check current count
+        existing = await execute_query(
+            request,
+            "SELECT position FROM friendship_message_sets WHERE friendship_id = %s ORDER BY position",
+            (friendship_id,)
+        )
+
+        if len(existing) >= 8:
+            raise HTTPException(status_code=400, detail="Friendship already has 8 message sets (max)")
+
+        # Check duplicate
+        dup = await execute_query_one(
+            request,
+            "SELECT id FROM friendship_message_sets WHERE friendship_id = %s AND message_set_id = %s",
+            (friendship_id, data.message_set_id)
+        )
+        if dup:
+            raise HTTPException(status_code=409, detail="Message set already assigned to this friendship")
+
+        # Verify message set exists and is accessible
+        set_data = await execute_query_one(
+            request,
+            "SELECT id, creator_id, is_public FROM message_sets WHERE id = %s",
+            (data.message_set_id,)
+        )
+        if not set_data:
+            raise HTTPException(status_code=404, detail="Message set not found")
+        if not set_data['is_public'] and set_data['creator_id'] != current_user['id']:
+            raise HTTPException(status_code=403, detail="No access to this message set")
+
+        # Auto-assign next available position (1-8)
+        used_positions = {r['position'] for r in existing}
+        next_position = next(p for p in range(1, 9) if p not in used_positions)
+
+        result = await execute_query_one(
+            request,
+            """
+            INSERT INTO friendship_message_sets (friendship_id, message_set_id, position)
+            VALUES (%s, %s, %s)
+            RETURNING id, friendship_id, message_set_id, position, created_at
+            """,
+            (friendship_id, data.message_set_id, next_position)
+        )
+
+        # Fetch the full response with message_set details
+        full = await execute_query_one(
+            request,
+            """
+            SELECT
+                fms.id, fms.friendship_id, fms.message_set_id, fms.position, fms.created_at,
+                ms.id as ms_id, ms.creator_id, ms.name, ms.description,
+                ms.is_public, ms.tags, ms.created_at as ms_created_at, ms.updated_at as ms_updated_at,
+                COUNT(m.id) FILTER (WHERE m.status = 'active') as message_count
+            FROM friendship_message_sets fms
+            JOIN message_sets ms ON ms.id = fms.message_set_id
+            LEFT JOIN messages m ON m.message_set_id = ms.id
+            WHERE fms.id = %s
+            GROUP BY fms.id, ms.id
+            """,
+            (result['id'],)
+        )
+
+        return FriendshipMessageSetResponse(
+            id=full['id'],
+            friendship_id=full['friendship_id'],
+            message_set_id=full['message_set_id'],
+            position=full['position'],
+            created_at=full['created_at'],
+            message_set=MessageSetResponse(
+                id=full['ms_id'],
+                creator_id=full['creator_id'],
+                name=full['name'],
+                description=full['description'],
+                is_public=full['is_public'],
+                tags=full['tags'],
+                created_at=full['ms_created_at'],
+                updated_at=full['ms_updated_at'],
+                message_count=full['message_count']
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to add friendship message set: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{friendship_id}/message-sets/{fms_id}")
+async def remove_friendship_message_set(
+    friendship_id: int,
+    fms_id: int,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove a message set from a friendship"""
+    logger.info(f"Remove friendship_message_set {fms_id} from friendship {friendship_id}")
+
+    try:
+        await verify_friendship_access(request, friendship_id, current_user['id'])
+
+        result = await execute_query_one(
+            request,
+            "DELETE FROM friendship_message_sets WHERE id = %s AND friendship_id = %s RETURNING id",
+            (fms_id, friendship_id)
+        )
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        return {"message": "Message set removed from friendship"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to remove friendship message set: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -98,6 +98,10 @@ class MessageResponse(BaseModel):
 # Friendship Message Set Models
 # ============================================================================
 
+class FriendshipMessageSetAdd(BaseModel):
+    message_set_id: int
+
+
 class FriendshipMessageSetAssignment(BaseModel):
     message_set_id: int
     position: int = Field(..., ge=1, le=8)

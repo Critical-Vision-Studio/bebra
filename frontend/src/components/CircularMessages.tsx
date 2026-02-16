@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Card, Text, Image } from '@mantine/core';
 import { calculateCircularPosition, getCircularTransform } from '../utils/circularLayout';
-import { Message } from '../api/messageSets';
+import type { Message } from '../types';
 
 interface CircularMessagesProps {
   messages: Message[];

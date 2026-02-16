@@ -33,6 +33,10 @@ class User(BaseModel):
     username: str
 
 
+class FriendUser(User):
+    friendship_id: int
+
+
 class FriendshipRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
@@ -232,7 +236,7 @@ async def get_users(request: Request, q: Optional[str] = None, current_user: dic
         )
 
 
-@users_router.get("/me/friends", response_model=list[User])
+@users_router.get("/me/friends", response_model=list[FriendUser])
 async def get_friends(request: Request, current_user: dict = Depends(get_current_user)):
     """Get friends of current user"""
     logger.info(f"Get friends endpoint accessed: {request.method} {request.url}")
@@ -241,7 +245,7 @@ async def get_friends(request: Request, current_user: dict = Depends(get_current
         friends = await execute_query(
             request,
             """
-            SELECT u.id, u.name as username
+            SELECT u.id, u.name as username, r.id as friendship_id
             FROM users u
             JOIN relationships r ON (
                 (r.user_1_id = u.id AND r.user_2_id = %s) OR
@@ -252,7 +256,7 @@ async def get_friends(request: Request, current_user: dict = Depends(get_current
             """,
             (current_user["id"], current_user["id"])
         )
-        return [User(**friend) for friend in friends]
+        return [FriendUser(**friend) for friend in friends]
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

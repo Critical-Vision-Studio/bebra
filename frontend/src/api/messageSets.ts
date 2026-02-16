@@ -1,126 +1,67 @@
-/**
- * Message Sets API client
- */
-import { apiClient } from './client';
-
-export interface MessageSet {
-  id: number;
-  creator_id: number;
-  name: string;
-  description?: string;
-  is_public: boolean;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-  message_count?: number;
-}
-
-export interface Message {
-  id: string;
-  message_set_id: number;
-  content_type: 'text' | 'image' | 'gif';
-  storage_type: 'inline' | 'url';
-  content: string;
-  display_order: number;
-  status: 'active' | 'inactive' | 'deleted';
-  created_at: string;
-  updated_at: string;
-}
+import { apiClient } from './client'
+import type { MessageSet, Message } from '../types'
 
 export interface MessageSetFilters {
-  public?: boolean;
-  tags?: string;
-  media_type?: 'text' | 'image' | 'gif' | 'all';
-  offset?: number;
-  limit?: number;
-}
-
-export interface CreateMessageSet {
-  name: string;
-  description?: string;
-  is_public: boolean;
-  tags: string[];
-}
-
-export interface UpdateMessageSet {
-  name?: string;
-  description?: string;
-  is_public?: boolean;
-  tags?: string[];
-}
-
-export interface CreateMessage {
-  content_type: 'text' | 'image' | 'gif';
-  storage_type: 'inline' | 'url';
-  content: string;
-  display_order: number;
-}
-
-export interface UpdateMessage {
-  content?: string;
-  display_order?: number;
-  status?: 'active' | 'inactive' | 'deleted';
+  public?: boolean
+  tags?: string
+  media_type?: 'text' | 'image' | 'gif' | 'all'
+  offset?: number
+  limit?: number
 }
 
 // Message Sets
-export const getMessageSets = async (filters?: MessageSetFilters): Promise<MessageSet[]> => {
-  const params = new URLSearchParams();
-  if (filters?.public !== undefined) params.append('public', String(filters.public));
-  if (filters?.tags) params.append('tags', filters.tags);
-  if (filters?.media_type) params.append('media_type', filters.media_type);
-  if (filters?.offset !== undefined) params.append('offset', String(filters.offset));
-  if (filters?.limit !== undefined) params.append('limit', String(filters.limit));
+export async function getMessageSets(filters?: MessageSetFilters): Promise<MessageSet[]> {
+  const { data } = await apiClient.get<MessageSet[]>('/message-sets', { params: filters })
+  return data
+}
 
-  const response = await apiClient.get(`/message-sets?${params.toString()}`);
-  return response.data;
-};
+export async function getMessageSet(id: number): Promise<MessageSet> {
+  const { data } = await apiClient.get<MessageSet>(`/message-sets/${id}`)
+  return data
+}
 
-export const getMessageSet = async (id: number): Promise<MessageSet> => {
-  const response = await apiClient.get(`/message-sets/${id}`);
-  return response.data;
-};
+export async function createMessageSet(payload: { name: string; description?: string; is_public: boolean; tags: string[] }): Promise<MessageSet> {
+  const { data } = await apiClient.post<MessageSet>('/message-sets', payload)
+  return data
+}
 
-export const createMessageSet = async (data: CreateMessageSet): Promise<MessageSet> => {
-  const response = await apiClient.post('/message-sets', data);
-  return response.data;
-};
+export async function updateMessageSet(id: number, payload: Partial<{ name: string; description: string; is_public: boolean; tags: string[] }>): Promise<MessageSet> {
+  const { data } = await apiClient.put<MessageSet>(`/message-sets/${id}`, payload)
+  return data
+}
 
-export const updateMessageSet = async (id: number, data: UpdateMessageSet): Promise<MessageSet> => {
-  const response = await apiClient.put(`/message-sets/${id}`, data);
-  return response.data;
-};
+export async function deleteMessageSet(id: number): Promise<void> {
+  await apiClient.delete(`/message-sets/${id}`)
+}
 
-export const deleteMessageSet = async (id: number): Promise<void> => {
-  await apiClient.delete(`/message-sets/${id}`);
-};
+export async function copyMessageSet(id: number): Promise<MessageSet> {
+  const { data } = await apiClient.post<MessageSet>(`/message-sets/${id}/copy`)
+  return data
+}
 
-export const copyMessageSet = async (id: number): Promise<MessageSet> => {
-  const response = await apiClient.post(`/message-sets/${id}/copy`);
-  return response.data;
-};
+export async function getMyMessageSets(): Promise<MessageSet[]> {
+  const { data } = await apiClient.get<MessageSet[]>('/message-sets/users/me')
+  return data
+}
 
-export const getMyMessageSets = async (): Promise<MessageSet[]> => {
-  const response = await apiClient.get('/message-sets/users/me');
-  return response.data;
-};
+// Messages within a set
+export async function getMessages(setId: number, includeInactive = false): Promise<Message[]> {
+  const { data } = await apiClient.get<Message[]>(`/message-sets/${setId}/messages`, {
+    params: includeInactive ? { include_inactive: true } : undefined,
+  })
+  return data
+}
 
-// Messages
-export const getMessages = async (setId: number, includeInactive = false): Promise<Message[]> => {
-  const params = includeInactive ? '?include_inactive=true' : '';
-  const response = await apiClient.get(`/message-sets/${setId}/messages${params}`);
-  return response.data;
-};
+export async function createMessage(setId: number, payload: { content_type: string; storage_type: string; content: string; display_order: number }): Promise<Message> {
+  const { data } = await apiClient.post<Message>(`/message-sets/${setId}/messages`, payload)
+  return data
+}
 
-export const createMessage = async (setId: number, data: CreateMessage): Promise<Message> => {
-  const response = await apiClient.post(`/message-sets/${setId}/messages`, data);
-  return response.data;
-};
+export async function updateMessage(messageId: string, payload: Partial<{ content: string; display_order: number; status: string }>): Promise<Message> {
+  const { data } = await apiClient.put<Message>(`/message-sets/messages/${messageId}`, payload)
+  return data
+}
 
-export const updateMessage = async (messageId: string, data: UpdateMessage): Promise<Message> => {
-  const response = await apiClient.put(`/message-sets/messages/${messageId}`, data);
-  return response.data;
-};
-
-export const deleteMessage = async (messageId: string): Promise<void> => {
-  await apiClient.delete(`/message-sets/messages/${messageId}`);
-};
+export async function deleteMessage(messageId: string): Promise<void> {
+  await apiClient.delete(`/message-sets/messages/${messageId}`)
+}

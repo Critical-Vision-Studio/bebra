@@ -1,3 +1,4 @@
+import { Stack, Text, Group, Button, Paper, Badge } from '@mantine/core'
 import type { FriendshipRequest } from '../types'
 
 interface FriendRequestsProps {
@@ -8,53 +9,68 @@ interface FriendRequestsProps {
 }
 
 export default function FriendRequests({ requests, currentUserId, onAccept, onReject }: FriendRequestsProps) {
-  const received = requests.filter(r => r.receiver_id === currentUserId && r.status === 'pending')
-  const sent = requests.filter(r => r.sender_id === currentUserId && r.status === 'pending')
+  const pending = requests.filter((r) => r.status === 'pending')
+  const incoming = pending.filter((r) => r.receiver_id === currentUserId && r.request_type === 'normal')
+  const outgoing = pending.filter((r) => r.sender_id === currentUserId && r.request_type === 'normal')
+  const tinder = pending.filter((r) => r.receiver_id === currentUserId && r.request_type === 'tinder')
 
   return (
-    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd' }}>
-      <h3 style={{ marginTop: 0, fontSize: '1rem', marginBottom: '1rem' }}>Friend Requests</h3>
-      
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.5rem' }}>Received ({received.length})</h4>
-        {received.length === 0 ? (
-          <div style={{ fontSize: '0.85rem', color: '#999' }}>No pending requests</div>
-        ) : (
-          received.map(req => (
-            <div key={req.id} style={{ padding: '0.5rem', background: '#f9f9f9', borderRadius: '4px', marginBottom: '0.5rem' }}>
-              <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>User #{req.sender_id}</div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => onAccept(req.id)}
-                  style={{ flex: 1, padding: '0.25rem', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => onReject(req.id)}
-                  style={{ flex: 1, padding: '0.25rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                >
-                  Reject
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-      
-      <div>
-        <h4 style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.5rem' }}>Sent ({sent.length})</h4>
-        {sent.length === 0 ? (
-          <div style={{ fontSize: '0.85rem', color: '#999' }}>No pending requests</div>
-        ) : (
-          sent.map(req => (
-            <div key={req.id} style={{ padding: '0.5rem', background: '#f9f9f9', borderRadius: '4px', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-              To User #{req.receiver_id} - Pending
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    <Stack gap="md">
+      <Section title="Incoming" count={incoming.length}>
+        {incoming.map((req) => (
+          <RequestCard key={req.id} label={`User #${req.sender_id}`} date={req.created_at} onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
+        ))}
+      </Section>
+
+      <Section title="Outgoing" count={outgoing.length}>
+        {outgoing.map((req) => (
+          <Paper key={req.id} p="xs" withBorder>
+            <Text size="sm">To User #{req.receiver_id} — <Text span c="dimmed">pending</Text></Text>
+          </Paper>
+        ))}
+      </Section>
+
+      <Section title="Tinder-Bother" count={tinder.length}>
+        {tinder.map((req) => (
+          <RequestCard key={req.id} label={`User #${req.sender_id}`} date={req.created_at} badge="tinder" onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
+        ))}
+      </Section>
+    </Stack>
   )
 }
 
+function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <Stack gap="xs">
+      <Group gap="xs">
+        <Text size="sm" fw={600}>{title}</Text>
+        <Badge size="sm" variant="light">{count}</Badge>
+      </Group>
+      {count === 0 ? <Text size="xs" c="dimmed">None</Text> : children}
+    </Stack>
+  )
+}
+
+function RequestCard({ label, date, badge, onAccept, onReject }: {
+  label: string
+  date: string
+  badge?: string
+  onAccept: () => void
+  onReject: () => void
+}) {
+  return (
+    <Paper p="xs" withBorder>
+      <Group justify="space-between" mb={4}>
+        <Group gap="xs">
+          <Text size="sm" fw={500}>{label}</Text>
+          {badge && <Badge size="xs" color="pink">{badge}</Badge>}
+        </Group>
+        <Text size="xs" c="dimmed">{new Date(date).toLocaleDateString()}</Text>
+      </Group>
+      <Group gap="xs">
+        <Button size="compact-xs" color="green" onClick={onAccept}>Accept</Button>
+        <Button size="compact-xs" color="red" variant="light" onClick={onReject}>Reject</Button>
+      </Group>
+    </Paper>
+  )
+}

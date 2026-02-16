@@ -1,78 +1,55 @@
-/**
- * Friendships API client
- */
-import { apiClient } from './client';
-import { MessageSet, Message } from './messageSets';
+import { apiClient } from './client'
+import type { FriendshipMessageSet, ConversationMessage } from '../types'
 
-export interface FriendshipMessageSet {
-  id: number;
-  friendship_id: number;
-  message_set_id: number;
-  position: number;
-  created_at: string;
-  message_set?: MessageSet;
+// Friendship message sets
+export async function getFriendshipMessageSets(friendshipId: number): Promise<FriendshipMessageSet[]> {
+  const { data } = await apiClient.get<FriendshipMessageSet[]>(`/friendships/${friendshipId}/message-sets`)
+  return data
 }
 
-export interface MessageSetAssignment {
-  message_set_id: number;
-  position: number;
-}
-
-export interface ConversationMessage {
-  id: number;
-  sender_id: number;
-  receiver_id: number;
-  friendship_id: number;
-  message_id: string;
-  message_set_id: number;
-  sent_at: string;
-  message?: Message;
-  message_set?: MessageSet;
-}
-
-export interface SendMessage {
-  message_id: string;
-}
-
-// Friendship Message Sets
-export const getFriendshipMessageSets = async (friendshipId: number): Promise<FriendshipMessageSet[]> => {
-  const response = await apiClient.get(`/friendships/${friendshipId}/message-sets`);
-  return response.data;
-};
-
-export const assignFriendshipMessageSets = async (
+export async function addFriendshipMessageSet(
   friendshipId: number,
-  assignments: MessageSetAssignment[]
-): Promise<FriendshipMessageSet[]> => {
-  const response = await apiClient.put(`/friendships/${friendshipId}/message-sets`, assignments);
-  return response.data;
-};
+  messageSetId: number
+): Promise<FriendshipMessageSet> {
+  const { data } = await apiClient.post<FriendshipMessageSet>(`/friendships/${friendshipId}/message-sets`, {
+    message_set_id: messageSetId,
+  })
+  return data
+}
 
-// Conversation History
-export const getConversationHistory = async (
+export async function removeFriendshipMessageSet(
   friendshipId: number,
-  offset = 0,
-  limit = 100
-): Promise<ConversationMessage[]> => {
-  const response = await apiClient.get(
-    `/friendships/${friendshipId}/messages?offset=${offset}&limit=${limit}`
-  );
-  return response.data;
-};
+  fmsId: number
+): Promise<void> {
+  await apiClient.delete(`/friendships/${friendshipId}/message-sets/${fmsId}`)
+}
 
-export const sendMessage = async (
+export async function assignFriendshipMessageSets(
   friendshipId: number,
-  data: SendMessage
-): Promise<ConversationMessage> => {
-  const response = await apiClient.post(`/friendships/${friendshipId}/messages`, data);
-  return response.data;
-};
+  assignments: { message_set_id: number; position: number }[]
+): Promise<FriendshipMessageSet[]> {
+  const { data } = await apiClient.put<FriendshipMessageSet[]>(`/friendships/${friendshipId}/message-sets`, assignments)
+  return data
+}
 
-export const markAsRead = async (friendshipId: number): Promise<void> => {
-  await apiClient.put(`/friendships/${friendshipId}/read`);
-};
+// Conversation history
+export async function getConversationHistory(friendshipId: number, offset = 0, limit = 100): Promise<ConversationMessage[]> {
+  const { data } = await apiClient.get<ConversationMessage[]>(`/friendships/${friendshipId}/messages`, {
+    params: { offset, limit },
+  })
+  return data
+}
 
-export const getUnreadStatus = async (friendshipId: number): Promise<{ has_unread: boolean; last_read_at?: string }> => {
-  const response = await apiClient.get(`/friendships/${friendshipId}/unread`);
-  return response.data;
-};
+export async function sendMessage(friendshipId: number, messageId: string): Promise<ConversationMessage> {
+  const { data } = await apiClient.post<ConversationMessage>(`/friendships/${friendshipId}/messages`, { message_id: messageId })
+  return data
+}
+
+export async function markAsRead(friendshipId: number): Promise<void> {
+  await apiClient.put(`/friendships/${friendshipId}/read`)
+}
+
+export async function getUnreadStatus(friendshipId: number): Promise<{ has_unread: boolean; last_read_at?: string }> {
+  const { data } = await apiClient.get(`/friendships/${friendshipId}/unread`)
+  return data
+}
