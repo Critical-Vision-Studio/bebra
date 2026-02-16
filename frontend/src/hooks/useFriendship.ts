@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getFriendshipMessageSets, addFriendshipMessageSet, removeFriendshipMessageSet, getConversationHistory, sendMessage, markAsRead } from '../api/friendships'
+import { getFriendshipMessageSets, addFriendshipMessageSet, removeFriendshipMessageSet, getConversationHistory, sendMessage, markAsRead, getAllUnread } from '../api/friendships'
 
 export function useFriendshipMessageSets(friendshipId: number | null) {
   return useQuery({
@@ -56,6 +56,14 @@ export function useMarkAsRead(friendshipId: number) {
     mutationFn: () => markAsRead(friendshipId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['friends'] })
+      qc.invalidateQueries({ queryKey: ['unreadFriendships'] })
     },
+  })
+}
+
+export function useUnreadFriendships() {
+  return useQuery({
+    queryKey: ['unreadFriendships'],
+    queryFn: getAllUnread,
   })
 }

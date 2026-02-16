@@ -159,15 +159,23 @@ Single-page web application for ephemeral communication using predefined message
 ## Use Cases
 
 ### UC1: User Communication Flow
-1. User views friend grid on main page
-2. Clicks friend → 8 message sets appear in circle around friend icon
-3. Clicks message set → 20 messages appear in circle (sets hidden)
+1. User always sees friend grid on main page (it never disappears)
+2. Clicks friend → blurred/shadowed overlay appears over the grid; 8 message sets shown in circle at center
+3. Clicks message set → overlay content transitions to 20 messages in circle (still over blurred grid)
 4. Clicks message → instantly sent to friend
-5. Friend sees unread indicator on sender's icon
-6. Friend clicks sender → message displayed center screen with sender name
-7. Message acknowledged, forgotten (ephemeral nature)
+5. Big back arrow on overlay left edge OR clicking empty backdrop area goes back one level
+6. Navigation levels (all visually layered on one view):
+   - **Level 0**: Friend grid (always visible, base layer)
+   - **Level 1**: Chosen friend — message sets overlay (grid blurred behind)
+   - **Level 2**: Chosen message set — messages overlay (grid blurred behind)
+7. Friend sees unread indicator on sender's icon
+8. Friend clicks sender → message displayed center screen with sender name
+9. Message acknowledged, forgotten (ephemeral nature)
 
 **Technical Notes**:
+- Overlay pattern: Mantine `Overlay` with `blur: 4` + `backgroundOpacity: 0.45`, same visual style as Settings modal
+- Back navigation: `ActionIcon` with `IconArrowLeft` positioned fixed-left on overlay; backdrop click also triggers `handleGoBack`
+- `FriendsOverlayLevel` state: `'none' | 'friend' | 'messages'` derived from `selectedFriend` / `selectedSet`
 - Circular layout: CSS `transform: rotate() + translate()`
 - Message sets: Retrieved via `/friendships/{id}/message-sets`
 - Send: `POST /friendships/{id}/messages` (message UUID generated at DB insertion)
@@ -655,10 +663,10 @@ src/
 
 **useState** (UI state):
 - Active sidebar view
-- Selected friend
-- Selected message set
-- Circle menu open/closed
-- Modal states
+- Selected friend (drives overlay level 1)
+- Selected message set (drives overlay level 2)
+- Friends overlay level: `'none' | 'friend' | 'messages'` (derived from selectedFriend/selectedSet)
+- Modal states (settings)
 
 ### Key Frontend Logic
 

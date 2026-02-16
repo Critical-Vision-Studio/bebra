@@ -53,3 +53,8 @@ export async function getUnreadStatus(friendshipId: number): Promise<{ has_unrea
   const { data } = await apiClient.get(`/friendships/${friendshipId}/unread`)
   return data
 }
+
+export async function getAllUnread(): Promise<number[]> {
+  const { data } = await apiClient.get<number[]>('/friendships/unread/all')
+  return data
+}

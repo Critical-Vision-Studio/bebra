@@ -11,6 +11,7 @@ from src.models import (
     ConversationMessageSend, ConversationMessageResponse,
     MessageSetResponse, MessageResponse
 )
+from src.ws_manager import manager as ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -481,7 +482,7 @@ async def send_message(
             (current_user['id'], friendship_id)
         )
         
-        return ConversationMessageResponse(
+        response = ConversationMessageResponse(
             id=result['id'],
             sender_id=result['sender_id'],
             receiver_id=result['receiver_id'],
@@ -511,6 +512,17 @@ async def send_message(
                 updated_at=result['ms_updated_at']
             )
         )
+
+        # Push real-time notification to receiver via WebSocket
+        try:
+            await ws_manager.send_to_user(receiver_id, {
+                "type": "new_message",
+                "data": response.model_dump(mode="json"),
+            })
+        except Exception as ws_err:
+            logger.warning(f"WS push failed for user {receiver_id}: {ws_err}")
+
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -546,6 +558,29 @@ async def mark_as_read(
         raise
     except Exception as e:
         logger.error(f"Failed to mark as read: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/unread/all")
+async def get_all_unread(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all friendship IDs with unread messages for the current user."""
+    logger.info(f"Get all unread for user: {current_user['id']}")
+    try:
+        results = await execute_query(
+            request,
+            """
+            SELECT friendship_id
+            FROM friendship_unread
+            WHERE user_id = %s AND has_unread = TRUE
+            """,
+            (current_user['id'],)
+        )
+        return [r['friendship_id'] for r in results]
+    except Exception as e:
+        logger.error(f"Failed to get all unread: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

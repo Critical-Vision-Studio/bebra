@@ -1,7 +1,7 @@
 import { Tabs, ScrollArea } from '@mantine/core'
-import { IconUsers, IconMessage, IconHistory, IconSettings } from '@tabler/icons-react'
+import { IconUsers, IconMessage, IconHistory } from '@tabler/icons-react'
 
-export type SidebarView = 'friends' | 'message-sets' | 'history' | 'settings'
+export type SidebarView = 'friends' | 'message-sets' | 'history'
 
 interface LeftSidebarProps {
   activeView: SidebarView
@@ -17,7 +17,6 @@ export default function LeftSidebar({ activeView, onViewChange, children }: Left
           <Tabs.Tab value="friends" leftSection={<IconUsers size={16} />}>Friends</Tabs.Tab>
           <Tabs.Tab value="message-sets" leftSection={<IconMessage size={16} />}>Sets</Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>History</Tabs.Tab>
-          <Tabs.Tab value="settings" leftSection={<IconSettings size={16} />}>Settings</Tabs.Tab>
         </Tabs.List>
       </Tabs>
       <ScrollArea style={{ flex: 1 }} p="sm">
