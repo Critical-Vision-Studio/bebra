@@ -15,6 +15,7 @@ from src.message_sets import router as message_sets_router
 from src.friendships import router as friendships_router
 from src.tinder_bother import router as tinder_bother_router
 from src.settings import router as settings_router, unwanted_router
+from src.shader_scenes import router as shader_scenes_router
 from src.ws_manager import manager as ws_manager
 
 load_dotenv()
@@ -91,6 +92,7 @@ app.include_router(friendships_router)  # Friendships routes (/friendships/*)
 app.include_router(tinder_bother_router)  # Tinder-bother routes (/tinder-bother/*)
 app.include_router(settings_router)  # Settings routes (/users/me/settings/*)
 app.include_router(unwanted_router)  # Unwanted users routes (/users/me/unwanted-users/*)
+app.include_router(shader_scenes_router)  # Shader scenes routes (/shader-scenes/*)
 
 # Store ws_manager on the app so other modules can access it
 app.ws_manager = ws_manager

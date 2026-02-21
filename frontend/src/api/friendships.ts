@@ -1,7 +1,13 @@
 import { apiClient } from './client'
-import type { FriendshipMessageSet, ConversationMessage } from '../types'
+import type { FriendshipMessageSet, ConversationMessage, MessageSet } from '../types'
 
-// Friendship message sets
+// Friendship used sets (derived from conversation history)
+export async function getFriendshipUsedSets(friendshipId: number): Promise<MessageSet[]> {
+  const { data } = await apiClient.get<MessageSet[]>(`/friendships/${friendshipId}/used-sets`)
+  return data
+}
+
+// Friendship message sets (legacy assigned sets)
 export async function getFriendshipMessageSets(friendshipId: number): Promise<FriendshipMessageSet[]> {
   const { data } = await apiClient.get<FriendshipMessageSet[]>(`/friendships/${friendshipId}/message-sets`)
   return data

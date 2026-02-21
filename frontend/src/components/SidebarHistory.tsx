@@ -5,11 +5,12 @@ import { useConversationHistory } from '../hooks/useFriendship'
 interface SidebarHistoryProps {
   friendshipId: number | null
   friendName: string | null
+  currentUserId: number
   highlightMessageIds?: Set<number>
   onHighlightsDone?: () => void
 }
 
-export default function SidebarHistory({ friendshipId, friendName, highlightMessageIds, onHighlightsDone }: SidebarHistoryProps) {
+export default function SidebarHistory({ friendshipId, friendName, currentUserId, highlightMessageIds, onHighlightsDone }: SidebarHistoryProps) {
   const { data: messages = [], isLoading } = useConversationHistory(friendshipId)
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -74,7 +75,7 @@ export default function SidebarHistory({ friendshipId, friendName, highlightMess
               >
                 <Group justify="space-between">
                   <Text size="xs" fw={500}>
-                    {msg.sender_id === msg.receiver_id ? 'You' : `#${msg.sender_id}`}
+                    {msg.sender_id === currentUserId ? 'You' : friendName ?? 'Friend'}
                   </Text>
                   <Text size="xs" c="dimmed">{new Date(msg.sent_at).toLocaleTimeString()}</Text>
                 </Group>

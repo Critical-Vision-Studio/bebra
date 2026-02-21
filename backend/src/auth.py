@@ -31,10 +31,14 @@ class UserSignUp(BaseModel):
 class User(BaseModel):
     id: int
     username: str
+    rejected_you: Optional[bool] = None
+    avatar_url: Optional[str] = None
+    shader_scene_id: Optional[int] = None
 
 
 class FriendUser(User):
     friendship_id: int
+    shader_fragment: Optional[str] = None
 
 
 class FriendshipRequest(BaseModel):
@@ -43,6 +47,8 @@ class FriendshipRequest(BaseModel):
     id: int
     sender_id: int
     receiver_id: int
+    sender_username: Optional[str] = None
+    receiver_username: Optional[str] = None
     status: str
     request_type: str = 'normal'
     attached_message_id: Optional[str] = None
@@ -109,7 +115,7 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
 
     user = await execute_query_one(
             request,
-        "SELECT id, name as username FROM users WHERE id = %s",
+        "SELECT id, name as username, avatar_url, shader_scene_id FROM users WHERE id = %s",
             (user_id,)
         )
     if not user:
@@ -221,11 +227,32 @@ async def get_users(request: Request, q: Optional[str] = None, current_user: dic
     logger.debug(f"Query params: q={q}, headers: {dict(request.headers)}, Client: {request.client}, User: {current_user}")
     try:
         if q:
-            query = "SELECT id, name as username FROM users WHERE name ILIKE %s ORDER BY name"
-            params = (f"%{q}%",)
+            query = """
+                SELECT u.id, u.name as username,
+                       (r.id IS NOT NULL) as rejected_you,
+                       u.avatar_url, u.shader_scene_id
+                FROM users u
+                LEFT JOIN relationships r
+                    ON r.user_1_id = u.id
+                    AND r.user_2_id = %s
+                    AND r.status = 'rejected'
+                WHERE u.name ILIKE %s
+                ORDER BY u.name
+            """
+            params = (current_user["id"], f"%{q}%")
         else:
-            query = "SELECT id, name as username FROM users ORDER BY name"
-            params = ()
+            query = """
+                SELECT u.id, u.name as username,
+                       (r.id IS NOT NULL) as rejected_you,
+                       u.avatar_url, u.shader_scene_id
+                FROM users u
+                LEFT JOIN relationships r
+                    ON r.user_1_id = u.id
+                    AND r.user_2_id = %s
+                    AND r.status = 'rejected'
+                ORDER BY u.name
+            """
+            params = (current_user["id"],)
 
         users = await execute_query(request, query, params)
         return [User(**user) for user in users]
@@ -245,12 +272,15 @@ async def get_friends(request: Request, current_user: dict = Depends(get_current
         friends = await execute_query(
             request,
             """
-            SELECT u.id, u.name as username, r.id as friendship_id
+            SELECT u.id, u.name as username, r.id as friendship_id,
+                   u.avatar_url, u.shader_scene_id,
+                   ss.fragment_shader as shader_fragment
             FROM users u
             JOIN relationships r ON (
                 (r.user_1_id = u.id AND r.user_2_id = %s) OR
                 (r.user_1_id = %s AND r.user_2_id = u.id)
             )
+            LEFT JOIN shader_scenes ss ON ss.id = u.shader_scene_id
             WHERE r.status = 'friend'
             ORDER BY u.name
             """,
@@ -292,6 +322,37 @@ async def get_blocked_users(request: Request, current_user: dict = Depends(get_c
         )
 
 
+class UpdateAvatar(BaseModel):
+    avatar_url: Optional[str] = None
+    shader_scene_id: Optional[int] = None
+
+
+@users_router.put("/me/avatar", response_model=User)
+async def update_avatar(body: UpdateAvatar, request: Request, current_user: dict = Depends(get_current_user)):
+    """Set user avatar: either an image URL or a shader scene (or clear both)."""
+    if body.shader_scene_id is not None:
+        scene = await execute_query_one(
+            request,
+            "SELECT id FROM shader_scenes WHERE id = %s",
+            (body.shader_scene_id,),
+        )
+        if not scene:
+            raise HTTPException(status_code=404, detail="Shader scene not found")
+
+    await execute_command(
+        request,
+        "UPDATE users SET avatar_url = %s, shader_scene_id = %s WHERE id = %s",
+        (body.avatar_url, body.shader_scene_id, current_user["id"]),
+    )
+
+    updated = await execute_query_one(
+        request,
+        "SELECT id, name as username, avatar_url, shader_scene_id FROM users WHERE id = %s",
+        (current_user["id"],),
+    )
+    return User(**updated)
+
+
 class SendFriendRequest(BaseModel):
     receiver_id: int
     request_type: str = 'normal'  # 'normal' or 'tinder'
@@ -307,12 +368,16 @@ async def get_friend_requests(request: Request, current_user: dict = Depends(get
         requests = await execute_query(
             request,
             """
-            SELECT id, sender_id, receiver_id, status, 
-                   COALESCE(request_type::text, 'normal') as request_type,
-                   attached_message_id, created_at, updated_at
-            FROM friendship_requests
-            WHERE sender_id = %s OR receiver_id = %s
-            ORDER BY created_at DESC
+            SELECT fr.id, fr.sender_id, fr.receiver_id, fr.status,
+                   COALESCE(fr.request_type::text, 'normal') as request_type,
+                   fr.attached_message_id, fr.created_at, fr.updated_at,
+                   su.name as sender_username,
+                   ru.name as receiver_username
+            FROM friendship_requests fr
+            JOIN users su ON su.id = fr.sender_id
+            JOIN users ru ON ru.id = fr.receiver_id
+            WHERE fr.sender_id = %s OR fr.receiver_id = %s
+            ORDER BY fr.created_at DESC
             """,
             (current_user["id"], current_user["id"])
         )
@@ -334,11 +399,11 @@ async def send_friend_request(req: SendFriendRequest, request: Request, current_
         if req.receiver_id == current_user["id"]:
             raise HTTPException(status_code=400, detail="Cannot send friend request to yourself")
 
-        # Check if friendship already exists
+        # Check relationships table (single source of truth for resolved states)
         existing_relationship = await execute_query_one(
             request,
             """
-            SELECT id, status FROM relationships
+            SELECT id, status, user_1_id FROM relationships
             WHERE (user_1_id = %s AND user_2_id = %s) OR (user_1_id = %s AND user_2_id = %s)
             """,
             (current_user["id"], req.receiver_id, req.receiver_id, current_user["id"])
@@ -346,10 +411,12 @@ async def send_friend_request(req: SendFriendRequest, request: Request, current_
 
         if existing_relationship:
             if existing_relationship['status'] == 'rejected':
-                raise HTTPException(status_code=403, detail="Cannot send request to user who rejected you")
+                if existing_relationship['user_1_id'] == req.receiver_id:
+                    raise HTTPException(status_code=403, detail="Cannot send request to user who rejected you")
+                raise HTTPException(status_code=400, detail="You have this user in your unwanted list. Remove them first.")
             raise HTTPException(status_code=400, detail="Relationship already exists")
 
-        # Check if request already exists
+        # Check for pending request (friendship_requests only holds pending rows)
         existing_request = await execute_query_one(
             request,
             """
@@ -414,10 +481,15 @@ async def accept_friend_request(request_id: int, request: Request, current_user:
     logger.info(f"Accept friend request endpoint accessed: {request.method} {request.url}")
     logger.debug(f"Path params: request_id={request_id}, headers: {dict(request.headers)}, Client: {request.client}, User: {current_user}")
     try:
-        # Get the request
+        # Get the pending request
         friend_request = await execute_query_one(
             request,
-            "SELECT * FROM friendship_requests WHERE id = %s",
+            """
+            SELECT id, sender_id, receiver_id, status,
+                   COALESCE(request_type::text, 'normal') as request_type,
+                   attached_message_id, created_at, updated_at
+            FROM friendship_requests WHERE id = %s
+            """,
             (request_id,)
         )
 
@@ -427,17 +499,14 @@ async def accept_friend_request(request_id: int, request: Request, current_user:
         if friend_request["receiver_id"] != current_user["id"]:
             raise HTTPException(status_code=403, detail="Not authorized to accept this request")
 
-        if friend_request["status"] != "pending":
-            raise HTTPException(status_code=400, detail="Request is not pending")
-
-        # Update request status
+        # Delete the transient request
         await execute_command(
             request,
-            "UPDATE friendship_requests SET status = 'accepted', updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            "DELETE FROM friendship_requests WHERE id = %s",
             (request_id,)
         )
 
-        # Create friendship relationship
+        # Create friendship in relationships (single source of truth)
         await execute_command(
             request,
             "INSERT INTO relationships (user_1_id, user_2_id, status) VALUES (%s, %s, 'friend')",
@@ -451,19 +520,16 @@ async def accept_friend_request(request_id: int, request: Request, current_user:
             (current_user["id"],)
         )
 
-        # Get updated request
-        updated_request = await execute_query_one(
-            request,
-            """
-            SELECT id, sender_id, receiver_id, status,
-                   request_type::text as request_type, attached_message_id,
-                   created_at, updated_at 
-            FROM friendship_requests WHERE id = %s
-            """,
-            (request_id,)
+        return FriendshipRequest(
+            id=friend_request["id"],
+            sender_id=friend_request["sender_id"],
+            receiver_id=friend_request["receiver_id"],
+            status="accepted",
+            request_type=friend_request["request_type"],
+            attached_message_id=str(friend_request["attached_message_id"]) if friend_request["attached_message_id"] else None,
+            created_at=str(friend_request["created_at"]),
+            updated_at=str(friend_request["updated_at"]),
         )
-
-        return FriendshipRequest(**updated_request)
     except HTTPException:
         raise
     except Exception as e:
@@ -479,10 +545,15 @@ async def reject_friend_request(request_id: int, request: Request, current_user:
     logger.info(f"Reject friend request endpoint accessed: {request.method} {request.url}")
     logger.debug(f"Path params: request_id={request_id}, headers: {dict(request.headers)}, Client: {request.client}, User: {current_user}")
     try:
-        # Get the request
+        # Get the pending request
         friend_request = await execute_query_one(
             request,
-            "SELECT * FROM friendship_requests WHERE id = %s",
+            """
+            SELECT id, sender_id, receiver_id, status,
+                   COALESCE(request_type::text, 'normal') as request_type,
+                   attached_message_id, created_at, updated_at
+            FROM friendship_requests WHERE id = %s
+            """,
             (request_id,)
         )
 
@@ -492,23 +563,20 @@ async def reject_friend_request(request_id: int, request: Request, current_user:
         if friend_request["receiver_id"] != current_user["id"]:
             raise HTTPException(status_code=403, detail="Not authorized to reject this request")
 
-        if friend_request["status"] != "pending":
-            raise HTTPException(status_code=400, detail="Request is not pending")
-
-        # Update request status
+        # Delete the transient request
         await execute_command(
             request,
-            "UPDATE friendship_requests SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            "DELETE FROM friendship_requests WHERE id = %s",
             (request_id,)
         )
 
-        # Add sender to unwanted list (rejected relationship)
+        # Add sender to rejector's unwanted list (relationships = source of truth)
         await execute_command(
             request,
             """
             INSERT INTO relationships (user_1_id, user_2_id, status)
             VALUES (%s, %s, 'rejected')
-            ON CONFLICT (user_1_id, user_2_id) DO NOTHING
+            ON CONFLICT (user_1_id, user_2_id) DO UPDATE SET status = 'rejected', updated_at = CURRENT_TIMESTAMP
             """,
             (friend_request["receiver_id"], friend_request["sender_id"])
         )
@@ -520,19 +588,16 @@ async def reject_friend_request(request_id: int, request: Request, current_user:
             (current_user["id"], friend_request["sender_id"])
         )
 
-        # Get updated request
-        updated_request = await execute_query_one(
-            request,
-            """
-            SELECT id, sender_id, receiver_id, status, 
-                   request_type::text as request_type, attached_message_id,
-                   created_at, updated_at 
-            FROM friendship_requests WHERE id = %s
-            """,
-            (request_id,)
+        return FriendshipRequest(
+            id=friend_request["id"],
+            sender_id=friend_request["sender_id"],
+            receiver_id=friend_request["receiver_id"],
+            status="rejected",
+            request_type=friend_request["request_type"],
+            attached_message_id=str(friend_request["attached_message_id"]) if friend_request["attached_message_id"] else None,
+            created_at=str(friend_request["created_at"]),
+            updated_at=str(friend_request["updated_at"]),
         )
-
-        return FriendshipRequest(**updated_request)
     except HTTPException:
         raise
     except Exception as e:

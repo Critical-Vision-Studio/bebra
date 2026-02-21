@@ -51,13 +51,48 @@ async def verify_friendship_access(request: Request, friendship_id: int, user_id
         raise HTTPException(status_code=403, detail="Access denied")
 
 
+@router.get("/{friendship_id}/used-sets", response_model=List[MessageSetResponse])
+async def get_friendship_used_sets(
+    friendship_id: int,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get top message sets used in this friendship, derived from conversation history"""
+    logger.info(f"Get used sets for friendship: {friendship_id}")
+
+    try:
+        await verify_friendship_access(request, friendship_id, current_user['id'])
+
+        query = """
+            SELECT
+                ms.id, ms.creator_id, ms.name, ms.description,
+                ms.is_public, ms.tags, ms.created_at, ms.updated_at,
+                COUNT(DISTINCT m.id) FILTER (WHERE m.status = 'active') as message_count
+            FROM conversation_messages cm
+            JOIN message_sets ms ON ms.id = cm.message_set_id
+            LEFT JOIN messages m ON m.message_set_id = ms.id
+            WHERE cm.friendship_id = %s
+            GROUP BY ms.id
+            ORDER BY COUNT(cm.id) DESC
+            LIMIT 8
+        """
+
+        results = await execute_query(request, query, (friendship_id,))
+        return [MessageSetResponse(**r) for r in results]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch friendship used sets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{friendship_id}/message-sets", response_model=List[FriendshipMessageSetResponse])
 async def get_friendship_message_sets(
     friendship_id: int,
     request: Request,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get 8 assigned message sets for a friendship"""
+    """Get 8 assigned message sets for a friendship (legacy)"""
     logger.info(f"Get message sets for friendship: {friendship_id}")
     
     try:
@@ -424,22 +459,19 @@ async def send_message(
         if message['status'] != 'active':
             raise HTTPException(status_code=400, detail="Message is not active")
         
-        # Verify message is in one of the assigned sets for this friendship
-        assigned = await execute_query_one(
+        # Verify the message's set is accessible (public or owned by sender)
+        set_data = await execute_query_one(
             request,
-            """
-            SELECT id FROM friendship_message_sets
-            WHERE friendship_id = %s AND message_set_id = %s
-            """,
-            (friendship_id, message['message_set_id'])
+            "SELECT id, creator_id, is_public FROM message_sets WHERE id = %s",
+            (message['message_set_id'],)
         )
-        
-        if not assigned:
-            raise HTTPException(
-                status_code=400,
-                detail="Message set not assigned to this friendship"
-            )
-        
+
+        if not set_data:
+            raise HTTPException(status_code=404, detail="Message set not found")
+
+        if not set_data['is_public'] and set_data['creator_id'] != current_user['id']:
+            raise HTTPException(status_code=403, detail="No access to this message set")
+
         # Insert conversation message
         await execute_command(
             request,

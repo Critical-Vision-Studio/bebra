@@ -1,4 +1,4 @@
-\restrict GEQOruf3RF6LHTfUgURA1bgdteE6NUejIqwluzP09mCFHDfQSoEHZqeKGtzTUba
+\restrict Zw2zSrQWRxz1E4m7ang6ukWWUVDbl0vMQb8xaN65Ik44mlBgtcv5U7DDTNVnC6t
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -51,7 +51,8 @@ CREATE TYPE public.friendship_request_type AS ENUM (
 
 CREATE TYPE public.friendships AS ENUM (
     'friend',
-    'blocked'
+    'blocked',
+    'rejected'
 );
 
 
@@ -465,6 +466,38 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: shader_scenes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shader_scenes (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    fragment_shader text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: shader_scenes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.shader_scenes_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: shader_scenes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.shader_scenes_id_seq OWNED BY public.shader_scenes.id;
+
+
+--
 -- Name: tinder_active_matches; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -536,7 +569,9 @@ CREATE TABLE public.users (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     email character varying(255),
     last_logged_in timestamp with time zone,
-    registered_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    registered_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    avatar_url text,
+    shader_scene_id integer
 );
 
 
@@ -621,6 +656,13 @@ ALTER TABLE ONLY public.refresh_tokens ALTER COLUMN id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.relationships ALTER COLUMN id SET DEFAULT nextval('public.relationships_id_seq'::regclass);
+
+
+--
+-- Name: shader_scenes id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shader_scenes ALTER COLUMN id SET DEFAULT nextval('public.shader_scenes_id_seq'::regclass);
 
 
 --
@@ -771,6 +813,14 @@ ALTER TABLE ONLY public.relationships
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: shader_scenes shader_scenes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shader_scenes
+    ADD CONSTRAINT shader_scenes_pkey PRIMARY KEY (id);
 
 
 --
@@ -1018,6 +1068,13 @@ CREATE INDEX idx_users_name ON public.users USING btree (name);
 
 
 --
+-- Name: idx_users_shader_scene; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_shader_scene ON public.users USING btree (shader_scene_id);
+
+
+--
 -- Name: messages enforce_message_set_limit; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1225,10 +1282,18 @@ ALTER TABLE ONLY public.user_settings
 
 
 --
+-- Name: users users_shader_scene_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_shader_scene_id_fkey FOREIGN KEY (shader_scene_id) REFERENCES public.shader_scenes(id) ON DELETE SET NULL;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict GEQOruf3RF6LHTfUgURA1bgdteE6NUejIqwluzP09mCFHDfQSoEHZqeKGtzTUba
+\unrestrict Zw2zSrQWRxz1E4m7ang6ukWWUVDbl0vMQb8xaN65Ik44mlBgtcv5U7DDTNVnC6t
 
 
 --
@@ -1237,4 +1302,5 @@ ALTER TABLE ONLY public.user_settings
 
 INSERT INTO public.schema_migrations (version) VALUES
     ('20260101000000'),
-    ('20260212185227');
+    ('20260212185227'),
+    ('20260221000000');

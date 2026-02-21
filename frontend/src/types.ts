@@ -3,10 +3,23 @@
 export interface User {
   id: number
   username: string
+  rejected_you?: boolean
+  avatar_url?: string | null
+  shader_scene_id?: number | null
 }
 
 export interface FriendUser extends User {
   friendship_id: number
+  shader_fragment?: string | null
+}
+
+// === Shader Scenes ===
+
+export interface ShaderScene {
+  id: number
+  name: string
+  fragment_shader: string
+  created_at: string
 }
 
 // === Relationships ===
@@ -31,6 +44,8 @@ export interface FriendshipRequest {
   id: number
   sender_id: number
   receiver_id: number
+  sender_username?: string
+  receiver_username?: string
   status: FriendshipRequestStatus
   request_type: FriendshipRequestType
   attached_message_id: string | null

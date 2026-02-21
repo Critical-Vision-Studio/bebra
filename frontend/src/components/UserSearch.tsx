@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { TextInput, Group, Button, Paper, Text, Stack } from '@mantine/core'
-import { IconSearch, IconUserPlus } from '@tabler/icons-react'
+import { TextInput, Group, Button, Paper, Text, Stack, Badge } from '@mantine/core'
+import { IconSearch, IconUserPlus, IconBan } from '@tabler/icons-react'
 import { getUsers } from '../api/mainAPI'
 import type { User } from '../types'
 
@@ -44,10 +44,21 @@ export default function UserSearch({ onSendRequest }: UserSearchProps) {
         <Paper withBorder p={0} mah={200} style={{ overflow: 'auto' }}>
           {results.map((user) => (
             <Group key={user.id} justify="space-between" px="xs" py={4} style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-              <Text size="sm">{user.username}</Text>
-              <Button size="compact-xs" variant="light" color="green" leftSection={<IconUserPlus size={14} />} onClick={() => onSendRequest(user.id)}>
-                Add
-              </Button>
+              <Group gap="xs">
+                <Text size="sm">{user.username}</Text>
+                {user.rejected_you && (
+                  <Badge size="xs" color="red" variant="light" leftSection={<IconBan size={10} />}>
+                    rejected you
+                  </Badge>
+                )}
+              </Group>
+              {user.rejected_you ? (
+                <Text size="xs" c="dimmed">unavailable</Text>
+              ) : (
+                <Button size="compact-xs" variant="light" color="green" leftSection={<IconUserPlus size={14} />} onClick={() => onSendRequest(user.id)}>
+                  Add
+                </Button>
+              )}
             </Group>
           ))}
         </Paper>

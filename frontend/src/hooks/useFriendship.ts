@@ -1,5 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getFriendshipMessageSets, addFriendshipMessageSet, removeFriendshipMessageSet, getConversationHistory, sendMessage, markAsRead, getAllUnread } from '../api/friendships'
+import { getFriendshipUsedSets, getFriendshipMessageSets, addFriendshipMessageSet, removeFriendshipMessageSet, getConversationHistory, sendMessage, markAsRead, getAllUnread } from '../api/friendships'
+
+export function useFriendshipUsedSets(friendshipId: number | null) {
+  return useQuery({
+    queryKey: ['friendshipUsedSets', friendshipId],
+    queryFn: () => getFriendshipUsedSets(friendshipId!),
+    enabled: friendshipId !== null,
+  })
+}
 
 export function useFriendshipMessageSets(friendshipId: number | null) {
   return useQuery({
@@ -46,6 +54,7 @@ export function useSendMessage() {
       sendMessage(friendshipId, messageId),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['conversationHistory', variables.friendshipId] })
+      qc.invalidateQueries({ queryKey: ['friendshipUsedSets', variables.friendshipId] })
     },
   })
 }

@@ -145,22 +145,13 @@ async def get_unwanted_users(
         results = await execute_query(
             request,
             """
-            SELECT 
-                CASE 
-                    WHEN user_1_id = %s THEN user_2_id
-                    ELSE user_1_id
-                END as id,
-                u.name as username
+            SELECT r.user_2_id as id, u.name as username, r.created_at as rejected_at
             FROM relationships r
-            JOIN users u ON u.id = CASE 
-                WHEN r.user_1_id = %s THEN r.user_2_id
-                ELSE r.user_1_id
-            END
-            WHERE (r.user_1_id = %s OR r.user_2_id = %s)
-            AND r.status = 'rejected'
+            JOIN users u ON u.id = r.user_2_id
+            WHERE r.user_1_id = %s AND r.status = 'rejected'
             ORDER BY u.name
             """,
-            (current_user['id'], current_user['id'], current_user['id'], current_user['id'])
+            (current_user['id'],)
         )
         
         return [UserBase(**r) for r in results]
@@ -179,21 +170,24 @@ async def remove_unwanted_user(
     logger.info(f"Remove unwanted user: {user_id}")
     
     try:
-        # Delete rejected relationship
-        result = await execute_query_one(
+        exists = await execute_query_one(
             request,
             """
-            DELETE FROM relationships
-            WHERE ((user_1_id = %s AND user_2_id = %s) OR (user_1_id = %s AND user_2_id = %s))
-            AND status = 'rejected'
-            RETURNING id
+            SELECT id FROM relationships
+            WHERE user_1_id = %s AND user_2_id = %s AND status = 'rejected'
             """,
-            (current_user['id'], user_id, user_id, current_user['id'])
+            (current_user['id'], user_id)
         )
-        
-        if not result:
+
+        if not exists:
             raise HTTPException(status_code=404, detail="User not in unwanted list")
-        
+
+        await execute_command(
+            request,
+            "DELETE FROM relationships WHERE id = %s",
+            (exists['id'],)
+        )
+
         return {"message": "User removed from unwanted list"}
     except HTTPException:
         raise

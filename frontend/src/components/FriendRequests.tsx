@@ -18,21 +18,21 @@ export default function FriendRequests({ requests, currentUserId, onAccept, onRe
     <Stack gap="md">
       <Section title="Incoming" count={incoming.length}>
         {incoming.map((req) => (
-          <RequestCard key={req.id} label={`User #${req.sender_id}`} date={req.created_at} onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
+          <RequestCard key={req.id} label={req.sender_username ?? 'Unknown'} date={req.created_at} onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
         ))}
       </Section>
 
       <Section title="Outgoing" count={outgoing.length}>
         {outgoing.map((req) => (
           <Paper key={req.id} p="xs" withBorder>
-            <Text size="sm">To User #{req.receiver_id} — <Text span c="dimmed">pending</Text></Text>
+            <Text size="sm">To {req.receiver_username ?? 'Unknown'} — <Text span c="dimmed">pending</Text></Text>
           </Paper>
         ))}
       </Section>
 
       <Section title="Tinder-Bother" count={tinder.length}>
         {tinder.map((req) => (
-          <RequestCard key={req.id} label={`User #${req.sender_id}`} date={req.created_at} badge="tinder" onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
+          <RequestCard key={req.id} label={req.sender_username ?? 'Unknown'} date={req.created_at} badge="tinder" onAccept={() => onAccept(req.id)} onReject={() => onReject(req.id)} />
         ))}
       </Section>
     </Stack>
